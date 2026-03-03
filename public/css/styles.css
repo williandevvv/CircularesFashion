@@ -115,3 +115,38 @@ th, td { padding: .65rem .6rem; border-bottom: 1px solid var(--border); text-ali
   .topbar { flex-direction: column; align-items: flex-start; }
   input, select { min-width: 100%; }
 }
+
+
+.hero-card {
+  padding: 1.2rem;
+  margin-bottom: 1rem;
+  background: linear-gradient(135deg, #ffffff 0%, #edf4ff 100%);
+}
+
+.hero-eyebrow {
+  margin: 0;
+  color: var(--primary-dark);
+  font-weight: 700;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  font-size: .75rem;
+}
+
+.hero-card h2 {
+  margin: .4rem 0 .5rem;
+}
+
+.hero-card p {
+  margin: .35rem 0;
+  color: var(--muted);
+}
+
+.hero-list {
+  margin: .8rem 0 0;
+  padding-left: 1.1rem;
+  color: #253b63;
+}
+
+.hero-list li {
+  margin: .35rem 0;
+}
