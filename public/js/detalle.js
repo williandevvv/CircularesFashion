@@ -43,6 +43,12 @@ function normalizePdfLink(url) {
   return url;
 }
 
+function getPdfjs() {
+  const lib = window.pdfjsLib;
+  if (!lib) throw new Error('PDF.js no está disponible (pdfjsLib undefined). Revisa CDN en detalle.html');
+  return lib;
+}
+
 function togglePdfUi(hasPdf) {
   pdfActions.style.display = hasPdf ? 'flex' : 'none';
   pdfViewer.style.display = hasPdf ? 'block' : 'none';
@@ -62,14 +68,12 @@ function setupOpenPdf(circular) {
 
 async function renderPdf() {
   if (!pdfSource) return;
-  if (!window.pdfjsLib) {
-    throw new Error('PDF.js no está disponible.');
-  }
+  const pdfjs = getPdfjs();
 
   pdfViewer.innerHTML = '';
   pdfDoc = null;
 
-  const loadingTask = window.pdfjsLib.getDocument(pdfSource);
+  const loadingTask = pdfjs.getDocument(pdfSource);
   pdfDoc = await loadingTask.promise;
 
   for (let pageNumber = 1; pageNumber <= pdfDoc.numPages; pageNumber += 1) {
@@ -93,7 +97,7 @@ async function refreshPdf() {
     await renderPdf();
   } catch (error) {
     console.error('Error al renderizar PDF:', error);
-    pdfViewer.innerHTML = '<p class="error">No se pudo cargar la vista previa del PDF.</p>';
+    pdfViewer.innerHTML = '<p class="error">No se pudo cargar la vista previa del PDF. Revisa el link o el tamaño del archivo.</p>';
   }
 }
 
