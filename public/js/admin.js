@@ -1,9 +1,13 @@
 import { deleteCircularById, getAllCirculares, saveCircular } from './db-local.js';
+import { extractCodesFromPdf } from './pdf-extract.js';
 import { currentSession, logout } from './auth.js';
 
 const form = document.getElementById('circular-form');
 const previewImagesInput = document.getElementById('previewImages');
 const previewThumbs = document.getElementById('previewThumbs');
+const pdfFileInput = document.getElementById('pdfFile');
+const pdfStatus = document.getElementById('pdfStatus');
+const codigosInput = document.getElementById('codigos');
 const circularesList = document.getElementById('circularesList');
 const adminMessage = document.getElementById('adminMessage');
 const userBadge = document.getElementById('userBadge');
@@ -15,7 +19,6 @@ const MAX_TOTAL_SIZE_BYTES = 8 * 1024 * 1024;
 
 let previewImagesData = [];
 
-
 function readFileAsDataURL(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -23,6 +26,18 @@ function readFileAsDataURL(file) {
     reader.onerror = () => reject(new Error(`No se pudo leer ${file.name}`));
     reader.readAsDataURL(file);
   });
+}
+
+function normalizeCodes(rawCodes = []) {
+  return [...new Set(rawCodes
+    .map((code) => String(code || '').trim().toUpperCase())
+    .filter((code) => code.length >= 2))];
+}
+
+function parseCodesFromText(value = '') {
+  return normalizeCodes(String(value)
+    .split(',')
+    .map((code) => code.trim()));
 }
 
 function showMessage(message = '') {
@@ -43,6 +58,9 @@ function renderPreviewThumbs() {
 function clearFormState() {
   form.reset();
   previewImagesData = [];
+  if (pdfStatus) {
+    pdfStatus.textContent = 'Si subes un PDF, se intentarán extraer códigos automáticamente para el buscador.';
+  }
   renderPreviewThumbs();
 }
 
@@ -87,6 +105,43 @@ async function handleImagesSelection(event) {
   }
 }
 
+async function handlePdfSelection(event) {
+  const file = event.target.files?.[0];
+  if (!file) {
+    if (pdfStatus) {
+      pdfStatus.textContent = 'Si subes un PDF, se intentarán extraer códigos automáticamente para el buscador.';
+    }
+    return;
+  }
+
+  if (pdfStatus) {
+    pdfStatus.textContent = 'Leyendo PDF y detectando códigos...';
+  }
+
+  try {
+    const detectedCodes = await extractCodesFromPdf(file);
+    const mergedCodes = normalizeCodes([
+      ...parseCodesFromText(codigosInput?.value || ''),
+      ...detectedCodes
+    ]);
+
+    if (codigosInput) {
+      codigosInput.value = mergedCodes.join(', ');
+    }
+
+    if (pdfStatus) {
+      pdfStatus.textContent = detectedCodes.length
+        ? `Se detectaron ${detectedCodes.length} código(s) desde el PDF.`
+        : 'No se detectaron códigos en el PDF. Puedes ingresarlos manualmente.';
+    }
+  } catch (error) {
+    console.error(error);
+    if (pdfStatus) {
+      pdfStatus.textContent = 'No se pudo leer el PDF. Puedes guardar igual y escribir códigos manualmente.';
+    }
+  }
+}
+
 function renderCircularesList() {
   const circulares = getAllCirculares();
 
@@ -101,6 +156,8 @@ function renderCircularesList() {
       <td>${circular.departamento || '-'}</td>
       <td>${circular.fecha || '-'}</td>
       <td>${circular.aplicaA || '-'}</td>
+      <td>${Array.isArray(circular.codigos) ? circular.codigos.length : 0}</td>
+      <td>${circular.pdfName || '-'}</td>
       <td>
         <div class="actions">
           <a class="btn btn-secondary" href="./detalle.html?id=${encodeURIComponent(circular.id)}">Ver</a>
@@ -119,6 +176,8 @@ function renderCircularesList() {
             <th>Departamento</th>
             <th>Fecha</th>
             <th>Aplica a</th>
+            <th>Códigos</th>
+            <th>PDF</th>
             <th>Acciones</th>
           </tr>
         </thead>
@@ -136,6 +195,8 @@ form?.addEventListener('submit', (event) => {
   const departamento = String(data.get('departamento') || '').trim();
   const fecha = String(data.get('fecha') || '').trim();
   const aplicaA = String(data.get('aplicaA') || '').trim();
+  const pdfFile = pdfFileInput?.files?.[0] || null;
+  const codigos = parseCodesFromText(String(data.get('codigos') || ''));
 
   if (!numero || !departamento || !fecha || !aplicaA) {
     alert('Completa los campos obligatorios.');
@@ -158,6 +219,8 @@ form?.addEventListener('submit', (event) => {
     departamento,
     fecha,
     aplicaA,
+    codigos,
+    pdfName: pdfFile ? pdfFile.name : null,
     previewImages: [...previewImagesData],
     createdAt: Date.now()
   };
@@ -174,6 +237,7 @@ form?.addEventListener('submit', (event) => {
 });
 
 previewImagesInput?.addEventListener('change', handleImagesSelection);
+pdfFileInput?.addEventListener('change', handlePdfSelection);
 
 circularesList?.addEventListener('click', (event) => {
   const target = event.target;
