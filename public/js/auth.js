@@ -1,48 +1,26 @@
-import { auth, onAuthStateChanged, signOut } from "./firebase-config.js";
+import { APP_MODE } from './app-config.js';
+import { initLocalAuth, loginLocal, getSession, logoutLocal } from './local-auth.js';
 
-const ADMIN_EMAILS = ["admin@circulares.local"];
+if (APP_MODE.auth === 'local') {
+  initLocalAuth();
+}
 
-const inferRole = (user, claims = {}) => {
-  if (claims.role) return claims.role;
-  if (ADMIN_EMAILS.includes((user?.email || "").toLowerCase())) return "admin";
-  return "tienda";
-};
-
-export const ensureSession = () =>
-  new Promise((resolve) => {
-    onAuthStateChanged(auth, async (user) => {
-      if (!user) {
-        const email = prompt("Email corporativo:");
-        const pass = prompt("Contraseña:");
-        if (!email || !pass) {
-          window.location.reload();
-          return;
-        }
-        const { signInWithEmailAndPassword } = await import("./firebase-config.js");
-        await signInWithEmailAndPassword(auth, email, pass);
-      }
-
-      const currentUser = auth.currentUser;
-      await currentUser.getIdToken(true);
-      const claims = (await currentUser.getIdTokenResult()).claims;
-      resolve({ user: currentUser, role: inferRole(currentUser, claims) });
-    });
-  });
-
-export const guardAdminRoute = async () => {
-  const session = await ensureSession();
-  if (session.role !== "admin") {
-    window.location.href = "./index.html";
-    return null;
+export function login(email, password) {
+  if (APP_MODE.auth === 'local') {
+    return loginLocal(email, password);
   }
-  return session;
-};
+  return { ok: false, message: 'Modo auth no implementado todavía.' };
+}
 
-export const bindLogout = (buttonId = "logoutBtn") => {
-  const btn = document.getElementById(buttonId);
-  if (!btn) return;
-  btn.addEventListener("click", async () => {
-    await signOut(auth);
-    window.location.reload();
-  });
-};
+export function currentSession() {
+  if (APP_MODE.auth === 'local') {
+    return getSession();
+  }
+  return null;
+}
+
+export function logout() {
+  if (APP_MODE.auth === 'local') {
+    logoutLocal();
+  }
+}

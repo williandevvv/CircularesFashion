@@ -1,114 +1,114 @@
-import {
-  db,
-  collection,
-  query,
-  where,
-  getDocs,
-  orderBy,
-} from "./firebase-config.js";
-import { ensureSession, bindLogout } from "./auth.js";
+import { getCirculares } from './db-local.js';
+import { currentSession, login, logout } from './auth.js';
 
-const searchInput = document.getElementById("searchInput");
-const searchBtn = document.getElementById("searchBtn");
-const resultsContainer = document.getElementById("resultsContainer");
-const departmentFilter = document.getElementById("departmentFilter");
-const welcomeText = document.getElementById("welcomeText");
+const loginView = document.getElementById('loginView');
+const appView = document.getElementById('appView');
+const loginForm = document.getElementById('loginForm');
+const loginError = document.getElementById('loginError');
+const btnLogout = document.getElementById('btnLogout');
+const btnAdmin = document.getElementById('btnAdmin');
+const userBadge = document.getElementById('userBadge');
 
-const isCircularNumber = (value) => /^\d{2,4}-\d{1,3}$/i.test(value);
+const searchInput = document.getElementById('searchInput');
+const departmentFilter = document.getElementById('departmentFilter');
+const cardsContainer = document.getElementById('cardsContainer');
 
-const buildTable = (rows = []) => {
-  if (!rows.length) return "<p>Sin tabla editable.</p>";
-  const body = rows
-    .map(
-      (row) => `
-      <tr>
-        <td>${row.codigo || ""}</td>
-        <td contenteditable="true">${row.descripcion || ""}</td>
-        <td contenteditable="true">${row.precioAnterior || ""}</td>
-        <td contenteditable="true">${row.precioNuevo || ""}</td>
-        <td contenteditable="true">${row.observaciones || ""}</td>
-      </tr>`
-    )
-    .join("");
+let session = currentSession();
 
-  return `<div class="table-wrap"><table><thead><tr><th>Código</th><th>Descripción</th><th>Precio anterior</th><th>Precio nuevo</th><th>Observaciones</th></tr></thead><tbody>${body}</tbody></table></div>`;
-};
+function showView() {
+  const isLogged = Boolean(session);
+  loginView.classList.toggle('hidden', isLogged);
+  appView.classList.toggle('hidden', !isLogged);
 
-const renderCards = (docs) => {
-  if (!docs.length) {
-    resultsContainer.innerHTML = '<article class="card result-card"><p>No se encontraron circulares.</p></article>';
-    return;
+  if (isLogged) {
+    userBadge.textContent = `${session.email} (${session.role})`;
+    btnAdmin.classList.toggle('hidden', session.role !== 'admin');
+    setupFilters();
+    renderResults();
   }
+}
 
-  resultsContainer.innerHTML = docs
-    .map((item) => {
-      const data = item.data();
-      return `
-      <article class="card result-card">
-        <div class="badge">Circular ${data.numero}</div>
-        <h3>${data.departamento}</h3>
-        <p><strong>Fecha:</strong> ${data.fecha || "-"}</p>
-        <p><strong>Aplica a:</strong> ${data.aplicaA || "-"}</p>
-        <div class="row-actions">
-          <a class="link-btn" href="${data.pdfUrl}" target="_blank" rel="noopener">Ver PDF</a>
-        </div>
-        ${buildTable(data.tabla)}
-      </article>`;
-    })
-    .join("");
-};
-
-const getAllCirculares = async () => {
-  const snap = await getDocs(query(collection(db, "circulares"), orderBy("createdAt", "desc")));
-  return snap.docs;
-};
-
-const searchCirculares = async () => {
-  const text = searchInput.value.trim().toUpperCase();
-  const department = departmentFilter.value;
-
-  let snap;
-  if (!text) {
-    snap = await getAllCirculares();
-  } else if (isCircularNumber(text)) {
-    snap = (await getDocs(query(collection(db, "circulares"), where("numero", "==", text)))).docs;
-  } else {
-    snap = (await getDocs(query(collection(db, "circulares"), where("codigos", "array-contains", text)))).docs;
-  }
-
-  if (department) {
-    snap = snap.filter((doc) => doc.data().departamento === department);
-  }
-
-  renderCards(snap);
-};
-
-const hydrateDepartments = async (docs) => {
-  const departments = [...new Set(docs.map((item) => item.data().departamento).filter(Boolean))];
+function setupFilters() {
+  const circulares = getCirculares();
+  const departments = [...new Set(circulares.map((c) => c.departamento).filter(Boolean))];
+  departmentFilter.innerHTML = '<option value="">Todos los departamentos</option>';
   departments.forEach((dep) => {
-    const option = document.createElement("option");
-    option.value = dep;
-    option.textContent = dep;
-    departmentFilter.appendChild(option);
+    const op = document.createElement('option');
+    op.value = dep;
+    op.textContent = dep;
+    departmentFilter.appendChild(op);
   });
-};
+}
 
-(async () => {
-  const session = await ensureSession();
-  if (session.role === "admin") {
-    window.location.href = "./admin.html";
+function matchCircular(circular, term, department) {
+  const normalized = term.toUpperCase();
+  const depOk = !department || circular.departamento === department;
+  if (!depOk) return false;
+  if (!normalized) return true;
+
+  const byCode = circular.codigos.some((c) => c.toUpperCase().includes(normalized));
+  const byNumber = circular.numero.toUpperCase().includes(normalized);
+  const byDepartment = circular.departamento.toUpperCase().includes(normalized);
+
+  return byCode || byNumber || byDepartment;
+}
+
+function renderResults() {
+  const term = (searchInput.value || '').trim();
+  const dep = departmentFilter.value;
+
+  const results = getCirculares().filter((c) => matchCircular(c, term, dep));
+
+  if (results.length === 0) {
+    cardsContainer.innerHTML = '<p class="empty">No hay resultados con ese filtro.</p>';
     return;
   }
-  bindLogout();
 
-  welcomeText.textContent = `Usuario: ${session.user.email} · Rol: ${session.role}`;
+  cardsContainer.innerHTML = results
+    .map(
+      (c) => `
+      <article class="card">
+        <h3>${c.numero}</h3>
+        <p><strong>Departamento:</strong> ${c.departamento}</p>
+        <p><strong>Fecha:</strong> ${c.fecha}</p>
+        <div class="actions">
+          <a class="btn" href="./detalle.html?id=${c.id}">Ver detalle</a>
+          ${c.pdfLink ? `<a class="btn btn-secondary" href="${c.pdfLink}" target="_blank" rel="noopener">Ver PDF</a>` : ''}
+        </div>
+      </article>
+    `
+    )
+    .join('');
+}
 
-  const docs = await getAllCirculares();
-  await hydrateDepartments(docs);
-  renderCards(docs);
+loginForm?.addEventListener('submit', (event) => {
+  event.preventDefault();
+  loginError.textContent = '';
+  const data = new FormData(loginForm);
+  const email = String(data.get('email') || '').trim();
+  const password = String(data.get('password') || '').trim();
 
-  searchBtn.addEventListener("click", searchCirculares);
-  searchInput.addEventListener("keydown", (event) => {
-    if (event.key === "Enter") searchCirculares();
-  });
-})();
+  const res = login(email, password);
+  if (!res.ok) {
+    loginError.textContent = res.message;
+    return;
+  }
+
+  session = currentSession();
+  showView();
+});
+
+searchInput?.addEventListener('input', renderResults);
+departmentFilter?.addEventListener('change', renderResults);
+
+btnLogout?.addEventListener('click', () => {
+  logout();
+  session = null;
+  showView();
+});
+
+btnAdmin?.addEventListener('click', () => {
+  window.location.href = './admin.html';
+});
+
+showView();
