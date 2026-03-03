@@ -147,6 +147,31 @@ Funciones incluidas:
 
 - `extractCircularCodes` (Callable): extrae códigos de PDF para circular.
 - `setAdminRole` (Callable): asigna claims de rol (`admin`, `auditor`, `bodega`, `tienda`).
+- `createDefaultUsers` (Callable): crea/actualiza usuarios por defecto para `admin` y `auditor` con sus claims.
+
+### Crear usuarios por defecto (admin y auditor)
+
+La función callable `createDefaultUsers` crea (o actualiza si ya existen) dos cuentas base:
+
+- Admin: `admin@circulares.local`
+- Auditor: `auditor@circulares.local`
+
+Puedes sobreescribir email/password por variables de entorno en Functions:
+
+- `DEFAULT_ADMIN_EMAIL`
+- `DEFAULT_ADMIN_PASSWORD`
+- `DEFAULT_AUDITOR_EMAIL`
+- `DEFAULT_AUDITOR_PASSWORD`
+
+Opcionalmente puedes proteger la creación con `DEFAULT_USERS_SECRET`. Si defines ese valor, debes enviarlo como `bootstrapSecret` en el payload.
+
+Payload de ejemplo:
+
+```json
+{
+  "bootstrapSecret": "SECRETO_OPCIONAL"
+}
+```
 
 ---
 
