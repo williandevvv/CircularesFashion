@@ -1,68 +1,60 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="es">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Circulares | Admin</title>
-    <link rel="stylesheet" href="./css/styles.css" />
-  </head>
-  <body>
-    <div class="app-layout">
-      <aside class="sidebar">
-        <div class="brand">
-          <h1>Circulares</h1>
-          <p>Panel administrativo</p>
-        </div>
-        <nav class="nav-links">
-          <a href="./index.html">Dashboard</a>
-          <a href="./admin.html" class="active">Panel Admin</a>
-          <button id="logoutBtn" class="ghost-btn">Cerrar sesión</button>
-        </nav>
-      </aside>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Circulares | Admin</title>
+  <link rel="stylesheet" href="./css/styles.css" />
+  <script type="module" src="./js/guard-admin.js"></script>
+</head>
+<body>
+  <div class="layout">
+    <aside class="sidebar">
+      <h1>Admin</h1>
+      <a class="btn btn-secondary" href="./index.html">Volver al buscador</a>
+      <button id="btnLogout" class="btn btn-ghost">Cerrar sesión</button>
+      <small id="userBadge" class="muted"></small>
+    </aside>
 
-      <main class="content">
-        <header class="topbar card">
-          <h2>Nueva circular</h2>
-          <p>Sube el PDF y deja que el sistema detecte los códigos automáticamente.</p>
-        </header>
+    <main class="main">
+      <section class="panel">
+        <h2>Nueva circular</h2>
+        <form id="circular-form" class="grid-form">
+          <label>Número</label>
+          <input name="numero" required placeholder="005-26" />
 
-        <section class="card form-card">
-          <form id="circularForm">
-            <div class="form-grid">
-              <label>
-                Número de circular
-                <input type="text" id="numero" required />
-              </label>
-              <label>
-                Departamento
-                <input type="text" id="departamento" required />
-              </label>
-              <label>
-                Fecha
-                <input type="date" id="fecha" required />
-              </label>
-              <label>
-                Aplica a
-                <select id="aplicaA" required>
-                  <option value="todas">Todas</option>
-                  <option value="mall">Mall</option>
-                  <option value="centro">Centro</option>
-                  <option value="tiendas-especificas">Tiendas específicas</option>
-                </select>
-              </label>
-              <label class="full-width">
-                PDF
-                <input type="file" id="pdf" accept="application/pdf" required />
-              </label>
-            </div>
+          <label>Departamento</label>
+          <input name="departamento" required placeholder="HOGAR" />
 
-            <button class="primary-btn" type="submit">Crear circular</button>
-            <p id="statusMessage"></p>
-          </form>
-        </section>
-      </main>
-    </div>
+          <label>Fecha</label>
+          <input name="fecha" type="date" required />
 
-    <script type="module" src="./js/admin.js"></script>
-  </body>
+          <label>Aplica a</label>
+          <select name="aplicaA" required>
+            <option value="">Selecciona...</option>
+            <option value="todas">todas</option>
+            <option value="mall">mall</option>
+            <option value="centro">centro</option>
+            <option value="tiendas_especificas">tiendas_especificas</option>
+          </select>
+
+          <label>Link PDF (opcional)</label>
+          <input name="pdfLink" type="url" placeholder="https://..." />
+
+          <label>PDF local</label>
+          <input id="pdfFile" type="file" accept="application/pdf" />
+
+          <div class="codes-box">
+            <strong>Códigos extraídos:</strong>
+            <p id="extractedCodes" class="muted"></p>
+          </div>
+
+          <button class="btn" type="submit">Guardar circular</button>
+        </form>
+      </section>
+    </main>
+  </div>
+
+  <script type="module" src="./js/admin.js"></script>
+</body>
 </html>

@@ -1,58 +1,48 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="es">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Circulares | Inicio</title>
-    <link rel="stylesheet" href="./css/styles.css" />
-  </head>
-  <body>
-    <div class="app-layout">
-      <aside class="sidebar">
-        <div class="brand">
-          <h1>Circulares</h1>
-          <p>Gestión interna</p>
-        </div>
-        <nav class="nav-links">
-          <a href="./index.html" class="active">Inicio</a>
-          <a href="./admin.html" id="adminNavLink" class="hidden">Panel Admin</a>
-          <button id="logoutBtn" class="ghost-btn">Cerrar sesión</button>
-        </nav>
-      </aside>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Circulares | Inicio</title>
+  <link rel="stylesheet" href="./css/styles.css" />
+</head>
+<body>
+  <div class="layout">
+    <aside class="sidebar">
+      <h1>Circulares</h1>
+      <p class="muted">Panel interno</p>
+      <button id="btnAdmin" class="btn hidden">Ir a Admin</button>
+      <button id="btnLogout" class="btn btn-ghost">Cerrar sesión</button>
+      <small id="userBadge" class="muted"></small>
+    </aside>
 
-      <main class="content">
-        <section class="card hero-card">
-          <p class="hero-eyebrow">Plataforma interna</p>
-          <h2>Bienvenido al portal de circulares</h2>
-          <p>
-            Consulta rápidamente las circulares vigentes por número, código o departamento.
-            Desde aquí también podrás abrir el PDF oficial y revisar los cambios por código.
-          </p>
-          <ul class="hero-list">
-            <li>🔎 Búsqueda inteligente por número o código.</li>
-            <li>🏬 Filtro por departamento para encontrar información más rápido.</li>
-            <li>📄 Acceso al PDF original y tabla editable por circular.</li>
-          </ul>
-        </section>
+    <main class="main">
+      <section id="loginView" class="panel auth-panel">
+        <h2>Acceso</h2>
+        <form id="loginForm">
+          <label>Email</label>
+          <input name="email" type="email" required />
+          <label>Contraseña</label>
+          <input name="password" type="password" required />
+          <button class="btn" type="submit">Entrar</button>
+          <p id="loginError" class="error"></p>
+        </form>
+      </section>
 
-        <header class="topbar card">
-          <div>
-            <h2>Buscador de circulares</h2>
-            <p id="welcomeText">Cargando usuario...</p>
-          </div>
+      <section id="appView" class="hidden">
+        <div class="panel search-panel">
+          <h2>Buscador de circulares</h2>
           <div class="filters">
-            <input id="searchInput" type="text" placeholder="Ej: 005-26 o COJIN130" />
-            <select id="departmentFilter">
-              <option value="">Todos los departamentos</option>
-            </select>
-            <button id="searchBtn" class="primary-btn">Buscar</button>
+            <input id="searchInput" type="text" placeholder="Buscar por código (COJIN130), número (005-26) o departamento" />
+            <select id="departmentFilter"></select>
           </div>
-        </header>
+        </div>
 
-        <section class="results" id="resultsContainer"></section>
-      </main>
-    </div>
+        <section id="cardsContainer" class="cards"></section>
+      </section>
+    </main>
+  </div>
 
-    <script type="module" src="./js/search.js"></script>
-  </body>
+  <script type="module" src="./js/search.js"></script>
+</body>
 </html>

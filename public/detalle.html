@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Circulares | Detalle</title>
+  <link rel="stylesheet" href="./css/styles.css" />
+</head>
+<body>
+  <div class="layout">
+    <aside class="sidebar">
+      <h1>Detalle</h1>
+      <a class="btn btn-secondary" href="./index.html">Volver</a>
+      <button id="btnLogout" class="btn btn-ghost">Cerrar sesión</button>
+      <small id="userBadge" class="muted"></small>
+    </aside>
+
+    <main class="main">
+      <section class="panel">
+        <h2>Información de circular</h2>
+        <div id="meta"></div>
+        <div id="pdfWrap" class="actions"></div>
+      </section>
+
+      <section class="panel">
+        <h2>Tabla de códigos</h2>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Código</th>
+                <th>Descripción</th>
+                <th>Precio anterior</th>
+                <th>Precio nuevo</th>
+                <th>Observaciones</th>
+              </tr>
+            </thead>
+            <tbody id="tablaBody"></tbody>
+          </table>
+        </div>
+        <button id="btnSave" class="btn">Guardar cambios</button>
+      </section>
+    </main>
+  </div>
+
+  <script type="module" src="./js/detalle.js"></script>
+</body>
+</html>

@@ -1,81 +1,95 @@
-import {
-  db,
-  storage,
-  functions,
-  addDoc,
-  collection,
-  serverTimestamp,
-  ref,
-  uploadBytes,
-  getDownloadURL,
-  httpsCallable,
-} from "./firebase-config.js";
-import { guardAdminRoute, bindLogout } from "./auth.js";
+import { addCircular } from './db-local.js';
+import { extractCodesFromPdf } from './pdf-extract.js';
+import { savePdf } from './storage-adapter.js';
+import { currentSession, logout } from './auth.js';
 
-const form = document.getElementById("circularForm");
-const statusMessage = document.getElementById("statusMessage");
+const form = document.getElementById('circular-form');
+const pdfFileInput = document.getElementById('pdfFile');
+const extractedCodesEl = document.getElementById('extractedCodes');
+const userBadge = document.getElementById('userBadge');
+const btnLogout = document.getElementById('btnLogout');
 
-const extractCodes = httpsCallable(functions, "extractCircularCodes");
+let extractedCodes = [];
 
-const toTableRows = (codes) =>
-  codes.map((codigo) => ({
+function makeRows(codes) {
+  return codes.map((codigo) => ({
     codigo,
-    descripcion: "",
-    precioAnterior: "",
-    precioNuevo: "",
-    observaciones: "",
+    descripcion: '',
+    precioAnterior: '',
+    precioNuevo: '',
+    observaciones: ''
   }));
+}
 
-const uploadPdf = async (file, numero) => {
-  const safeName = `${Date.now()}-${numero}-${file.name}`.replace(/\s+/g, "_");
-  const storageRef = ref(storage, `circulares/${safeName}`);
-  await uploadBytes(storageRef, file, { contentType: file.type });
-  return getDownloadURL(storageRef);
-};
+function renderCodes() {
+  extractedCodesEl.textContent = extractedCodes.length
+    ? extractedCodes.join(', ')
+    : 'No hay códigos extraídos todavía.';
+}
 
-const createCircular = async (payload) => {
-  return addDoc(collection(db, "circulares"), {
-    ...payload,
-    createdAt: serverTimestamp(),
-  });
-};
+pdfFileInput?.addEventListener('change', async (event) => {
+  const file = event.target.files?.[0];
+  if (!file) {
+    extractedCodes = [];
+    renderCodes();
+    return;
+  }
 
-(async () => {
-  const session = await guardAdminRoute();
-  if (!session) return;
-  bindLogout();
+  extractedCodesEl.textContent = 'Extrayendo códigos...';
+  try {
+    extractedCodes = await extractCodesFromPdf(file);
+    renderCodes();
+  } catch (error) {
+    console.error(error);
+    extractedCodes = [];
+    extractedCodesEl.textContent = 'No se pudo leer el PDF.';
+  }
+});
 
-  form.addEventListener("submit", async (event) => {
-    event.preventDefault();
-    statusMessage.textContent = "Procesando circular...";
+form?.addEventListener('submit', async (event) => {
+  event.preventDefault();
 
-    try {
-      const numero = document.getElementById("numero").value.trim();
-      const departamento = document.getElementById("departamento").value.trim();
-      const fecha = document.getElementById("fecha").value;
-      const aplicaA = document.getElementById("aplicaA").value;
-      const pdfFile = document.getElementById("pdf").files[0];
-      if (!pdfFile) throw new Error("Debes adjuntar un archivo PDF.");
+  const data = new FormData(form);
+  const numero = String(data.get('numero') || '').trim();
+  const departamento = String(data.get('departamento') || '').trim();
+  const fecha = String(data.get('fecha') || '').trim();
+  const aplicaA = String(data.get('aplicaA') || '').trim();
+  const rawPdfLink = String(data.get('pdfLink') || '').trim();
+  const pdfFile = pdfFileInput.files?.[0] || null;
 
-      const pdfUrl = await uploadPdf(pdfFile, numero);
-      const extraction = await extractCodes({ pdfUrl });
-      const codigos = extraction.data.codes || [];
+  if (!numero || !departamento || !fecha || !aplicaA) {
+    alert('Completa los campos obligatorios.');
+    return;
+  }
 
-      await createCircular({
-        numero,
-        departamento,
-        fecha,
-        aplicaA,
-        pdfUrl,
-        codigos,
-        tabla: toTableRows(codigos),
-      });
+  const storageRes = await savePdf(pdfFile);
 
-      statusMessage.textContent = `Circular creada. Códigos detectados: ${codigos.length}`;
-      form.reset();
-    } catch (error) {
-      console.error(error);
-      statusMessage.textContent = `Error: ${error.message}`;
-    }
-  });
-})();
+  const circular = {
+    id: crypto.randomUUID(),
+    numero,
+    departamento,
+    fecha,
+    aplicaA,
+    pdfLink: rawPdfLink || storageRes.pdfUrl || null,
+    codigos: extractedCodes,
+    tabla: makeRows(extractedCodes),
+    createdAt: Date.now()
+  };
+
+  addCircular(circular);
+  alert('Circular guardada correctamente.');
+  extractedCodes = [];
+  renderCodes();
+  form.reset();
+});
+
+btnLogout?.addEventListener('click', () => {
+  logout();
+  window.location.replace('./index.html');
+});
+
+const session = currentSession();
+if (session) {
+  userBadge.textContent = `${session.email} (${session.role})`;
+}
+renderCodes();

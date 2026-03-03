@@ -1,235 +1,82 @@
-# Plataforma Interna de Gestión de Circulares
+# Circulares Fashion (modo local)
 
-Aplicación web corporativa para centralizar la carga, consulta y trazabilidad de circulares empresariales en PDF. La solución utiliza Firebase Authentication, Firestore, Storage, Cloud Functions y Hosting para ofrecer un flujo seguro de punta a punta.
+Este proyecto está preparado para correr como sitio estático en GitHub Pages y empezar en modo 100% local (sin Firebase por ahora).
 
-## Funcionalidades principales
+## Estructura
 
-- Inicio de sesión con Firebase Authentication.
-- Control de acceso por roles (`admin`, `auditor`, `bodega`, `tienda`) con validación en frontend y backend.
-- Panel administrativo para crear circulares con metadatos y PDF.
-- Extracción automática de códigos desde PDF con Cloud Functions + `pdf-parse`.
-- Generación automática de tabla editable por circular:
-  - Código
-  - Descripción
-  - Precio anterior
-  - Precio nuevo
-  - Observaciones
-- Búsqueda inteligente:
-  - Si el término parece número de circular (ej: `005-26`), busca por `numero`.
-  - En otros casos, busca por código dentro del arreglo `codigos`.
-- Filtro por departamento y visualización en tarjetas.
+- `/index.html` (raíz): solo redirige automáticamente a `/public/index.html`.
+- `/public/index.html`: login + buscador de circulares.
+- `/public/admin.html`: panel para crear circulares (solo admin).
+- `/public/detalle.html`: vista de detalle con tabla editable por circular.
 
----
+## Cómo funciona el modo local
 
-## Arquitectura del sistema
+- La autenticación usa `localStorage`.
+- La sesión activa también se guarda en `localStorage`.
+- Las circulares se guardan en `localStorage` bajo una base local simple.
+- Si en `admin.html` el usuario no tiene rol `admin`, se redirige de inmediato a `index.html`.
 
-1. El usuario `admin` crea una circular en `admin.html`.
-2. El PDF se sube a Firebase Storage (`/circulares/...`).
-3. El frontend invoca la Cloud Function `extractCircularCodes` enviando `pdfUrl`.
-4. La función descarga el PDF, extrae texto y aplica regex:
+## Usuarios por defecto
 
-```regex
-\b[A-Z]{2,}[A-Z0-9]*(?:-[A-Z0-9]+)*\b
-```
+Se inicializan automáticamente estos usuarios:
 
-5. Se filtran palabras comunes (`MOTIVO`, `DEPTO`, `FECHA`, `CIRCULAR`, etc.) y se devuelve un arreglo único de códigos.
-6. Se guarda la circular en Firestore (`circulares/{id}`) con `codigos[]` y `tabla[]` generada automáticamente.
+1. `admin@circulares.local` / `Admin123!` / rol `admin`
+2. `auditor@circulares.local` / `Auditor123!` / rol `auditor`
 
----
+### Cambiar contraseñas
 
-## Estructura del proyecto
+Las contraseñas están en el almacenamiento local (`cf_users`).
+Opciones rápidas para cambiarlas:
 
-```text
-/public
-  index.html
-  admin.html
-  /css
-    styles.css
-  /js
-    auth.js
-    admin.js
-    search.js
-    firebase-config.js
-/functions
-  index.js
-  package.json
-firebase.json
-firestore.rules
-storage.rules
-.firebaserc
-README.md
-```
+- Abrir DevTools → Application/Storage → `localStorage` y editar `cf_users`.
+- O usar la función `updateUserPassword(email, newPassword)` en `public/js/local-auth.js` desde consola importando el módulo.
 
----
+## Flujo de uso
 
-## Configuración inicial de Firebase
+1. Entrar por `public/index.html`.
+2. Iniciar sesión.
+3. Si el usuario es admin, puede ir al panel Admin y crear circulares.
+4. En Admin:
+   - Completa datos de la circular.
+   - Opcionalmente pega un link externo de PDF.
+   - Opcionalmente sube un PDF local para extraer códigos automáticamente con PDF.js.
+5. En el buscador principal puedes buscar por:
+   - código (`COJIN130`, `FC-25-0904`, etc.),
+   - número de circular (`005-26`),
+   - departamento.
+6. En detalle se puede editar la tabla y guardar cambios.
 
-### 1) Crear proyecto Firebase
+## Despliegue en GitHub Pages
 
-- Crear un proyecto en Firebase Console.
-- Copiar el `projectId`.
-- Actualizar `.firebaserc` y `public/js/firebase-config.js` con los datos reales del proyecto.
+1. Sube este repo a GitHub.
+2. En **Settings → Pages**, configura como fuente la rama principal (`main` o la que uses) y carpeta raíz (`/`).
+3. GitHub Pages abrirá `index.html` en la raíz.
+4. Ese archivo redirige automáticamente a `/public/index.html`.
 
-### 2) Habilitar Authentication
+## Preparado para migrar a Firebase
 
-- Ir a **Authentication > Sign-in method**.
-- Habilitar `Email/Password`.
-- Crear usuarios internos (admin/auditor/bodega/tienda).
-
-### 3) Crear Firestore
-
-- Ir a **Firestore Database**.
-- Crear la base en modo producción.
-- Aplicar las reglas de `firestore.rules`.
-
-### 4) Configurar Storage
-
-- Ir a **Storage**.
-- Inicializar bucket.
-- Aplicar las reglas de `storage.rules`.
-
----
-
-## Reglas sugeridas
-
-### Firestore (`firestore.rules`)
+El archivo `public/js/app-config.js` ya trae switches:
 
 ```js
-rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-    function isAuthenticated() { return request.auth != null; }
-    function isAdmin() { return isAuthenticated() && request.auth.token.role == 'admin'; }
-
-    match /circulares/{docId} {
-      allow read: if isAuthenticated();
-      allow create, update, delete: if isAdmin();
-    }
-  }
-}
+export const APP_MODE = { auth: 'local', db: 'local', storage: 'local' };
 ```
 
-### Storage (`storage.rules`)
+### Pasos para migrar después
 
-```js
-rules_version = '2';
-service firebase.storage {
-  match /b/{bucket}/o {
-    function isAuthenticated() { return request.auth != null; }
-    function isAdmin() { return isAuthenticated() && request.auth.token.role == 'admin'; }
+1. Crear proyecto en Firebase.
+2. Activar Authentication y Firestore.
+3. (Opcional) Activar Storage.
+   - Nota: para aprovisionar bucket de Storage normalmente se requiere plan Blaze.
+4. Cambiar `APP_MODE` a `firebase` en los módulos necesarios (`auth`, `db`, `storage`).
+5. Reemplazar `local-auth` por Firebase Auth + lógica de roles.
+6. Completar `storage-adapter.js` para subir PDF y devolver `downloadURL`.
 
-    match /circulares/{allPaths=**} {
-      allow read: if isAuthenticated();
-      allow write: if isAdmin();
-    }
-  }
-}
-```
+## Ejecutar localmente
 
----
-
-## Cloud Functions
-
-### Instalar dependencias
+Puedes abrir directamente `public/index.html`, pero recomendado usar un servidor estático mínimo para evitar limitaciones del navegador con módulos:
 
 ```bash
-cd functions
-npm install
+python3 -m http.server 8080
 ```
 
-### Desplegar funciones
-
-```bash
-firebase deploy --only functions
-```
-
-Funciones incluidas:
-
-- `extractCircularCodes` (Callable): extrae códigos de PDF para circular.
-- `setAdminRole` (Callable): asigna claims de rol (`admin`, `auditor`, `bodega`, `tienda`).
-- `createDefaultUsers` (Callable): crea/actualiza usuarios por defecto para `admin` y `auditor` con sus claims.
-
-### Crear usuarios por defecto (admin y auditor)
-
-La función callable `createDefaultUsers` crea (o actualiza si ya existen) dos cuentas base:
-
-- Admin: `admin@circulares.local`
-- Auditor: `auditor@circulares.local`
-
-Puedes sobreescribir email/password por variables de entorno en Functions:
-
-- `DEFAULT_ADMIN_EMAIL`
-- `DEFAULT_ADMIN_PASSWORD`
-- `DEFAULT_AUDITOR_EMAIL`
-- `DEFAULT_AUDITOR_PASSWORD`
-
-Opcionalmente puedes proteger la creación con `DEFAULT_USERS_SECRET`. Si defines ese valor, debes enviarlo como `bootstrapSecret` en el payload.
-
-Payload de ejemplo:
-
-```json
-{
-  "bootstrapSecret": "SECRETO_OPCIONAL"
-}
-```
-
----
-
-## Asignar rol admin (custom claims)
-
-Opción recomendada: usar `setAdminRole` desde un usuario ya administrador.
-
-Ejemplo de payload:
-
-```json
-{
-  "uid": "UID_DEL_USUARIO",
-  "role": "admin"
-}
-```
-
-También puede asignarse por script con `firebase-admin` desde un entorno seguro interno.
-
-> Nota operativa: después de cambiar claims, el usuario debe renovar token (cerrar sesión y volver a entrar).
-
----
-
-## Deploy de Hosting
-
-```bash
-firebase deploy --only hosting
-```
-
-Para desplegar todo (hosting, reglas y funciones):
-
-```bash
-firebase deploy
-```
-
----
-
-## Colección principal
-
-`circulares/{id}`
-
-- `numero`
-- `departamento`
-- `fecha`
-- `aplicaA`
-- `pdfUrl`
-- `codigos[]`
-- `tabla[]`
-- `createdAt`
-
-Opcional para índices por código:
-
-`codigoIndex/{codigo}/refs/{circularId}`
-
----
-
-## Notas técnicas
-
-- La validación de rol se ejecuta en frontend (UI/rutas) y backend (Cloud Functions + rules).
-- `/admin` queda protegido por guard de rol; usuarios no admin se redirigen a dashboard.
-- La búsqueda combina estrategia por patrón de número vs. búsqueda en `array-contains` para códigos.
-- La interfaz está diseñada con layout corporativo, sidebar y comportamiento responsivo.
+Luego abre: `http://localhost:8080/public/index.html`.
