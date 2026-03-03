@@ -9,6 +9,11 @@
 </head>
 <body>
   <div class="layout">
+    <header class="mobile-header">
+      <button class="btn btn-secondary mobile-menu-toggle" type="button" aria-label="Abrir menú">☰</button>
+      <h1>Admin</h1>
+    </header>
+
     <aside class="sidebar">
       <h1>Admin</h1>
       <a class="btn btn-secondary" href="./index.html">Volver al buscador</a>
@@ -18,7 +23,7 @@
 
     <main class="main">
       <section class="panel">
-        <h2>Nueva circular</h2>
+        <h2 id="formTitle">Nueva circular</h2>
         <form id="circular-form" class="grid-form">
           <label>Número</label>
           <input name="numero" required placeholder="005-26" />
@@ -49,7 +54,10 @@
           <label>Códigos detectados</label>
           <input id="codigos" name="codigos" placeholder="Se completa desde PDF o manualmente (separados por coma)" />
 
-          <button class="btn" type="submit">Guardar circular</button>
+          <div class="actions">
+            <button id="submitButton" class="btn" type="submit">Crear circular</button>
+            <button id="cancelEditButton" class="btn btn-secondary hidden" type="button">Cancelar edición</button>
+          </div>
         </form>
       </section>
 

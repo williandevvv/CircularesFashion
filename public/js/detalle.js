@@ -8,7 +8,9 @@ const metaEl = document.getElementById('meta');
 const imageViewer = document.getElementById('imageViewer');
 const noImages = document.getElementById('noImages');
 const btnLogout = document.getElementById('btnLogout');
+const mobileLogout = document.getElementById('mobileLogout');
 const userBadge = document.getElementById('userBadge');
+const menuToggle = document.querySelector('.mobile-menu-toggle');
 
 const session = currentSession();
 if (!session) {
@@ -54,9 +56,16 @@ function initPage() {
   renderImages(Array.isArray(circular.previewImages) ? circular.previewImages : []);
 }
 
-initPage();
-
-btnLogout?.addEventListener('click', () => {
+function handleLogout() {
   logout();
   window.location.replace('./index.html');
+}
+
+initPage();
+
+btnLogout?.addEventListener('click', handleLogout);
+mobileLogout?.addEventListener('click', handleLogout);
+
+menuToggle?.addEventListener('click', () => {
+  document.body.classList.toggle('sidebar-open');
 });

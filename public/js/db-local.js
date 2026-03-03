@@ -59,7 +59,7 @@ export function deleteCircularById(id) {
   return true;
 }
 
-export function updateCircular(id, patch) {
+export function updateCircularById(id, partialData) {
   const all = getAllCirculares();
   const index = all.findIndex((c) => c.id === id);
 
@@ -67,7 +67,24 @@ export function updateCircular(id, patch) {
     return null;
   }
 
-  all[index] = { ...all[index], ...patch };
+  all[index] = { ...all[index], ...partialData };
   saveCirculares(all);
   return all[index];
+}
+
+export function replaceCircularById(id, fullObject) {
+  const all = getAllCirculares();
+  const index = all.findIndex((c) => c.id === id);
+
+  if (index === -1) {
+    return null;
+  }
+
+  all[index] = { ...fullObject, id };
+  saveCirculares(all);
+  return all[index];
+}
+
+export function updateCircular(id, patch) {
+  return updateCircularById(id, patch);
 }
