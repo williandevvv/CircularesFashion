@@ -13,7 +13,6 @@ const searchBtn = document.getElementById("searchBtn");
 const resultsContainer = document.getElementById("resultsContainer");
 const departmentFilter = document.getElementById("departmentFilter");
 const welcomeText = document.getElementById("welcomeText");
-const adminNavLink = document.getElementById("adminNavLink");
 
 const isCircularNumber = (value) => /^\d{2,4}-\d{1,3}$/i.test(value);
 
@@ -96,10 +95,13 @@ const hydrateDepartments = async (docs) => {
 
 (async () => {
   const session = await ensureSession();
+  if (session.role === "admin") {
+    window.location.href = "./admin.html";
+    return;
+  }
   bindLogout();
 
   welcomeText.textContent = `Usuario: ${session.user.email} · Rol: ${session.role}`;
-  if (session.role === "admin") adminNavLink.classList.remove("hidden");
 
   const docs = await getAllCirculares();
   await hydrateDepartments(docs);
