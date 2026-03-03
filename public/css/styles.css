@@ -67,7 +67,7 @@ input, select {
 .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1rem; }
 .card { background: var(--panel); border: 1px solid var(--border); border-radius: 14px; padding: 1rem; }
 .actions { display: flex; gap: .6rem; flex-wrap: wrap; margin-top: .75rem; }
-.muted { color: var(--muted); }
+.muted { color: #64748b; }
 .hidden { display: none !important; }
 .error { color: #b91c1c; }
 .empty { color: var(--muted); text-align: center; }
@@ -101,4 +101,41 @@ td input { margin: 0; }
   box-shadow: 0 6px 18px rgba(0, 0, 0, .08);
   border-radius: 10px;
   background: #fff;
+}
+
+
+.preview-thumbs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.preview-thumbs img {
+  width: 120px;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+}
+
+.image-viewer {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  margin-top: 15px;
+}
+
+.image-viewer img {
+  width: 100%;
+  max-width: 1000px;
+  border-radius: 14px;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+}
+
+.btn-danger {
+  background: #dc2626;
+}
+
+.btn-danger:hover {
+  background: #b91c1c;
 }

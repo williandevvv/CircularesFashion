@@ -1,62 +1,134 @@
-import { addCircular } from './db-local.js';
-import { extractCodesFromPdf } from './pdf-extract.js';
+import { deleteCircularById, getAllCirculares, saveCircular } from './db-local.js';
 import { currentSession, logout } from './auth.js';
-import { saveLocalPdf } from './pdf-local-store.js';
 
 const form = document.getElementById('circular-form');
-const pdfFileInput = document.getElementById('pdfFile');
-const extractedCodesEl = document.getElementById('extractedCodes');
+const previewImagesInput = document.getElementById('previewImages');
+const previewThumbs = document.getElementById('previewThumbs');
+const circularesList = document.getElementById('circularesList');
+const adminMessage = document.getElementById('adminMessage');
 const userBadge = document.getElementById('userBadge');
 const btnLogout = document.getElementById('btnLogout');
 
-let extractedCodes = [];
-let selectedPdfFile = null;
+const MAX_IMAGES = 10;
+const MAX_IMAGE_SIZE_BYTES = Math.round(1.5 * 1024 * 1024);
+const MAX_TOTAL_SIZE_BYTES = 8 * 1024 * 1024;
 
-function makeRows(codes) {
-  return codes.map((codigo) => ({
-    codigo,
-    descripcion: '',
-    precioAnterior: '',
-    precioNuevo: '',
-    observaciones: ''
-  }));
+let previewImagesData = [];
+
+
+function readFileAsDataURL(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ''));
+    reader.onerror = () => reject(new Error(`No se pudo leer ${file.name}`));
+    reader.readAsDataURL(file);
+  });
 }
 
-function renderCodes(message) {
-  if (message) {
-    extractedCodesEl.textContent = message;
+function showMessage(message = '') {
+  adminMessage.textContent = message;
+}
+
+function renderPreviewThumbs() {
+  previewThumbs.innerHTML = '';
+
+  previewImagesData.forEach((image, index) => {
+    const img = document.createElement('img');
+    img.src = image;
+    img.alt = `Vista previa ${index + 1}`;
+    previewThumbs.appendChild(img);
+  });
+}
+
+function clearFormState() {
+  form.reset();
+  previewImagesData = [];
+  renderPreviewThumbs();
+}
+
+async function handleImagesSelection(event) {
+  const files = Array.from(event.target.files || []);
+
+  if (files.length > MAX_IMAGES) {
+    alert(`Máximo ${MAX_IMAGES} imágenes por circular.`);
+    previewImagesInput.value = '';
+    previewImagesData = [];
+    renderPreviewThumbs();
     return;
   }
 
-  extractedCodesEl.textContent = extractedCodes.length
-    ? extractedCodes.join(', ')
-    : 'No hay códigos extraídos todavía.';
-}
-
-pdfFileInput?.addEventListener('change', async (event) => {
-  const file = event.target.files?.[0];
-  if (!file) {
-    extractedCodes = [];
-    selectedPdfFile = null;
-    renderCodes();
+  const imageTooLarge = files.find((file) => file.size > MAX_IMAGE_SIZE_BYTES);
+  if (imageTooLarge) {
+    alert(`La imagen "${imageTooLarge.name}" supera 1.5MB.`);
+    previewImagesInput.value = '';
+    previewImagesData = [];
+    renderPreviewThumbs();
     return;
   }
 
-  extractedCodesEl.textContent = 'Cargando PDF y extrayendo códigos...';
+  const totalBytes = files.reduce((sum, file) => sum + file.size, 0);
+  if (totalBytes > MAX_TOTAL_SIZE_BYTES) {
+    alert('Demasiadas imágenes para modo local. Reduce tamaño o cantidad.');
+    previewImagesInput.value = '';
+    previewImagesData = [];
+    renderPreviewThumbs();
+    return;
+  }
 
   try {
-    selectedPdfFile = file;
-    extractedCodes = await extractCodesFromPdf(file);
-    renderCodes('PDF cargado. Códigos extraídos: ' + (extractedCodes.join(', ') || 'ninguno'));
+    previewImagesData = await Promise.all(files.map((file) => readFileAsDataURL(file)));
+    renderPreviewThumbs();
   } catch (error) {
     console.error(error);
-    extractedCodes = [];
-    selectedPdfFile = null;
-    extractedCodesEl.textContent = 'No se pudo leer el PDF.';
+    alert('No se pudieron leer las imágenes seleccionadas.');
+    previewImagesInput.value = '';
+    previewImagesData = [];
+    renderPreviewThumbs();
   }
-});
+}
 
-form?.addEventListener('submit', async (event) => {
+function renderCircularesList() {
+  const circulares = getAllCirculares();
+
+  if (!circulares.length) {
+    circularesList.innerHTML = '<p class="muted">No hay circulares guardadas.</p>';
+    return;
+  }
+
+  const rows = circulares.map((circular) => `
+    <tr>
+      <td>${circular.numero || '-'}</td>
+      <td>${circular.departamento || '-'}</td>
+      <td>${circular.fecha || '-'}</td>
+      <td>${circular.aplicaA || '-'}</td>
+      <td>
+        <div class="actions">
+          <a class="btn btn-secondary" href="./detalle.html?id=${encodeURIComponent(circular.id)}">Ver</a>
+          <button class="btn btn-danger" type="button" data-delete-id="${circular.id}">Eliminar</button>
+        </div>
+      </td>
+    </tr>
+  `).join('');
+
+  circularesList.innerHTML = `
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Número</th>
+            <th>Departamento</th>
+            <th>Fecha</th>
+            <th>Aplica a</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>
+  `;
+}
+
+form?.addEventListener('submit', (event) => {
   event.preventDefault();
 
   const data = new FormData(form);
@@ -64,10 +136,19 @@ form?.addEventListener('submit', async (event) => {
   const departamento = String(data.get('departamento') || '').trim();
   const fecha = String(data.get('fecha') || '').trim();
   const aplicaA = String(data.get('aplicaA') || '').trim();
-  const rawPdfLink = String(data.get('pdfLink') || '').trim();
 
   if (!numero || !departamento || !fecha || !aplicaA) {
     alert('Completa los campos obligatorios.');
+    return;
+  }
+
+  const estimatedTotalBytes = previewImagesData.reduce((sum, imageDataUrl) => {
+    const base64Content = imageDataUrl.split(',')[1] || '';
+    return sum + Math.round((base64Content.length * 3) / 4);
+  }, 0);
+
+  if (estimatedTotalBytes > MAX_TOTAL_SIZE_BYTES) {
+    alert('Demasiadas imágenes para modo local. Reduce tamaño o cantidad.');
     return;
   }
 
@@ -77,39 +158,43 @@ form?.addEventListener('submit', async (event) => {
     departamento,
     fecha,
     aplicaA,
-    pdfLink: rawPdfLink || null,
-    codigos: extractedCodes,
-    tabla: makeRows(extractedCodes),
+    previewImages: [...previewImagesData],
     createdAt: Date.now()
   };
 
-  if (selectedPdfFile) {
-    circular.pdfSource = 'indexeddb';
-    circular.pdfStorageKey = circular.id;
-  } else if (circular.pdfLink) {
-    circular.pdfSource = 'link';
-  }
-
   try {
-    if (selectedPdfFile) {
-      await saveLocalPdf(circular.pdfStorageKey, selectedPdfFile);
-    }
-
-    addCircular(circular);
-
-    alert('Circular guardada correctamente.');
-    extractedCodes = [];
-    selectedPdfFile = null;
-    renderCodes();
-    form.reset();
+    saveCircular(circular);
+    showMessage('Circular guardada.');
+    clearFormState();
+    renderCircularesList();
   } catch (error) {
     console.error(error);
-    if (error?.name === 'QuotaExceededError') {
-      alert('PDF muy pesado para modo local. Use link PDF o active Storage.');
-      return;
-    }
-
     alert('No se pudo guardar la circular.');
+  }
+});
+
+previewImagesInput?.addEventListener('change', handleImagesSelection);
+
+circularesList?.addEventListener('click', (event) => {
+  const target = event.target;
+  if (!(target instanceof HTMLElement)) {
+    return;
+  }
+
+  const id = target.dataset.deleteId;
+  if (!id) {
+    return;
+  }
+
+  const confirmed = window.confirm('¿Seguro que quieres eliminar esta circular? Esta acción no se puede deshacer.');
+  if (!confirmed) {
+    return;
+  }
+
+  const deleted = deleteCircularById(id);
+  if (deleted) {
+    showMessage('Circular eliminada.');
+    renderCircularesList();
   }
 });
 
@@ -122,4 +207,5 @@ const session = currentSession();
 if (session) {
   userBadge.textContent = `${session.email} (${session.role})`;
 }
-renderCodes();
+
+renderCircularesList();
