@@ -38,19 +38,18 @@
             <option value="tiendas_especificas">tiendas_especificas</option>
           </select>
 
-          <label>Link PDF (opcional)</label>
-          <input name="pdfLink" type="url" placeholder="https://..." />
-
-          <label>PDF local</label>
-          <input id="pdfFile" type="file" accept="application/pdf" />
-
-          <div class="codes-box">
-            <strong>Códigos extraídos:</strong>
-            <p id="extractedCodes" class="muted"></p>
-          </div>
+          <label>Imágenes de la circular (pueden ser varias)</label>
+          <input id="previewImages" type="file" accept="image/*" multiple />
+          <div id="previewThumbs" class="preview-thumbs"></div>
 
           <button class="btn" type="submit">Guardar circular</button>
         </form>
+      </section>
+
+      <section class="card">
+        <h2>Circulares guardadas</h2>
+        <p id="adminMessage" class="muted"></p>
+        <div id="circularesList"></div>
       </section>
     </main>
   </div>
