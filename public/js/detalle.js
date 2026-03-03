@@ -18,6 +18,7 @@ const openPdf = document.getElementById('openPdf');
 
 let pdfSource = '';
 let objectPdfUrl = '';
+let externalPdfLink = '';
 let pdfDoc = null;
 let currentScale = 1.2;
 const zoomStep = 0.15;
@@ -36,13 +37,30 @@ function normalizePdfLink(url) {
   if (!url) return '';
 
   const drivePattern = /drive\.google\.com\/file\/d\/([^/]+)/;
+  const driveOpenPattern = /drive\.google\.com\/open\?id=([^&]+)/;
   const match = url.match(drivePattern);
+  const openMatch = url.match(driveOpenPattern);
 
   if (match?.[1]) {
     return `https://drive.google.com/file/d/${match[1]}/preview`;
   }
 
+  if (openMatch?.[1]) {
+    return `https://drive.google.com/file/d/${openMatch[1]}/preview`;
+  }
+
   return url;
+}
+
+function renderIframePreview(url) {
+  pdfViewer.innerHTML = '';
+  const iframe = document.createElement('iframe');
+  iframe.className = 'pdf-page';
+  iframe.style.width = '100%';
+  iframe.style.minHeight = '75vh';
+  iframe.src = url;
+  iframe.title = 'Vista previa del PDF';
+  pdfViewer.appendChild(iframe);
 }
 
 function getPdfjs() {
@@ -101,6 +119,12 @@ async function refreshPdf() {
     await renderPdf();
   } catch (error) {
     console.error('Error al renderizar PDF:', error);
+
+    if (externalPdfLink) {
+      renderIframePreview(externalPdfLink);
+      return;
+    }
+
     pdfViewer.innerHTML = '<p class="error">No se pudo cargar la vista previa del PDF. Revisa el link o el tamaño del archivo.</p>';
   }
 }
@@ -137,10 +161,12 @@ async function initPage() {
   setupOpenPdf(circular);
 
   if (circular.pdfDataUrl) {
+    externalPdfLink = '';
     pdfSource = circular.pdfDataUrl;
     togglePdfUi(true);
     refreshPdf();
   } else if (circular.pdfLink) {
+    externalPdfLink = normalizePdfLink(circular.pdfLink);
     pdfSource = normalizePdfLink(circular.pdfLink);
     togglePdfUi(true);
     refreshPdf();
