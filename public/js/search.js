@@ -8,6 +8,8 @@ const loginError = document.getElementById('loginError');
 const btnLogout = document.getElementById('btnLogout');
 const btnAdmin = document.getElementById('btnAdmin');
 const userBadge = document.getElementById('userBadge');
+const mobileLogout = document.getElementById('mobileLogout');
+const menuToggle = document.querySelector('.mobile-menu-toggle');
 
 const searchInput = document.getElementById('searchInput');
 const departmentFilter = document.getElementById('departmentFilter');
@@ -19,6 +21,10 @@ function showView() {
   const isLogged = Boolean(session);
   loginView.classList.toggle('hidden', isLogged);
   appView.classList.toggle('hidden', !isLogged);
+
+  if (mobileLogout) {
+    mobileLogout.classList.toggle('hidden', !isLogged);
+  }
 
   if (isLogged) {
     userBadge.textContent = `${session.email} (${session.role})`;
@@ -83,6 +89,13 @@ function renderResults() {
     .join('');
 }
 
+function handleLogout() {
+  logout();
+  session = null;
+  document.body.classList.remove('sidebar-open');
+  showView();
+}
+
 loginForm?.addEventListener('submit', (event) => {
   event.preventDefault();
   loginError.textContent = '';
@@ -103,14 +116,15 @@ loginForm?.addEventListener('submit', (event) => {
 searchInput?.addEventListener('input', renderResults);
 departmentFilter?.addEventListener('change', renderResults);
 
-btnLogout?.addEventListener('click', () => {
-  logout();
-  session = null;
-  showView();
-});
+btnLogout?.addEventListener('click', handleLogout);
+mobileLogout?.addEventListener('click', handleLogout);
 
 btnAdmin?.addEventListener('click', () => {
   window.location.href = './admin.html';
+});
+
+menuToggle?.addEventListener('click', () => {
+  document.body.classList.toggle('sidebar-open');
 });
 
 showView();
