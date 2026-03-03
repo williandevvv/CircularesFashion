@@ -1,6 +1,7 @@
 import { addCircular } from './db-local.js';
 import { extractCodesFromPdf } from './pdf-extract.js';
 import { currentSession, logout } from './auth.js';
+import { saveLocalPdf } from './pdf-local-store.js';
 
 const form = document.getElementById('circular-form');
 const pdfFileInput = document.getElementById('pdfFile');
@@ -9,7 +10,7 @@ const userBadge = document.getElementById('userBadge');
 const btnLogout = document.getElementById('btnLogout');
 
 let extractedCodes = [];
-let pdfDataUrl = '';
+let selectedPdfFile = null;
 
 function makeRows(codes) {
   return codes.map((codigo) => ({
@@ -32,20 +33,11 @@ function renderCodes(message) {
     : 'No hay códigos extraídos todavía.';
 }
 
-function readFileAsDataUrl(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result || ''));
-    reader.onerror = () => reject(new Error('No se pudo leer el archivo PDF.'));
-    reader.readAsDataURL(file);
-  });
-}
-
 pdfFileInput?.addEventListener('change', async (event) => {
   const file = event.target.files?.[0];
   if (!file) {
     extractedCodes = [];
-    pdfDataUrl = '';
+    selectedPdfFile = null;
     renderCodes();
     return;
   }
@@ -53,13 +45,13 @@ pdfFileInput?.addEventListener('change', async (event) => {
   extractedCodesEl.textContent = 'Cargando PDF y extrayendo códigos...';
 
   try {
-    pdfDataUrl = await readFileAsDataUrl(file);
+    selectedPdfFile = file;
     extractedCodes = await extractCodesFromPdf(file);
     renderCodes('PDF cargado. Códigos extraídos: ' + (extractedCodes.join(', ') || 'ninguno'));
   } catch (error) {
     console.error(error);
     extractedCodes = [];
-    pdfDataUrl = '';
+    selectedPdfFile = null;
     extractedCodesEl.textContent = 'No se pudo leer el PDF.';
   }
 });
@@ -86,23 +78,28 @@ form?.addEventListener('submit', async (event) => {
     fecha,
     aplicaA,
     pdfLink: rawPdfLink || null,
-    pdfDataUrl: pdfDataUrl || null,
     codigos: extractedCodes,
     tabla: makeRows(extractedCodes),
     createdAt: Date.now()
   };
 
-  if (circular.pdfDataUrl) {
-    circular.pdfSource = 'dataurl';
+  if (selectedPdfFile) {
+    circular.pdfSource = 'indexeddb';
+    circular.pdfStorageKey = circular.id;
   } else if (circular.pdfLink) {
     circular.pdfSource = 'link';
   }
 
   try {
+    if (selectedPdfFile) {
+      await saveLocalPdf(circular.pdfStorageKey, selectedPdfFile);
+    }
+
     addCircular(circular);
+
     alert('Circular guardada correctamente.');
     extractedCodes = [];
-    pdfDataUrl = '';
+    selectedPdfFile = null;
     renderCodes();
     form.reset();
   } catch (error) {

@@ -1,5 +1,6 @@
 import { getCircularById } from './db-local.js';
 import { currentSession, logout } from './auth.js';
+import { getLocalPdf } from './pdf-local-store.js';
 
 const params = new URLSearchParams(window.location.search);
 const id = params.get('id');
@@ -16,6 +17,7 @@ const btnZoomIn = document.getElementById('zoomIn');
 const openPdf = document.getElementById('openPdf');
 
 let pdfSource = '';
+let objectPdfUrl = '';
 let pdfDoc = null;
 let currentScale = 1.2;
 const zoomStep = 0.15;
@@ -73,7 +75,9 @@ async function renderPdf() {
   pdfViewer.innerHTML = '';
   pdfDoc = null;
 
-  const loadingTask = pdfjs.getDocument(pdfSource);
+  const loadingTask = typeof pdfSource === 'string'
+    ? pdfjs.getDocument(pdfSource)
+    : pdfjs.getDocument({ data: pdfSource });
   pdfDoc = await loadingTask.promise;
 
   for (let pageNumber = 1; pageNumber <= pdfDoc.numPages; pageNumber += 1) {
@@ -101,17 +105,34 @@ async function refreshPdf() {
   }
 }
 
-const circular = getCircularById(id);
-if (!circular) {
-  metaEl.innerHTML = '<p>No se encontró la circular.</p>';
-  togglePdfUi(false);
-} else {
+async function initPage() {
+  const circular = getCircularById(id);
+  if (!circular) {
+    metaEl.innerHTML = '<p>No se encontró la circular.</p>';
+    togglePdfUi(false);
+    return;
+  }
+
   metaEl.innerHTML = `
     <p><strong>Número:</strong> ${circular.numero}</p>
     <p><strong>Departamento:</strong> ${circular.departamento}</p>
     <p><strong>Fecha:</strong> ${circular.fecha}</p>
     <p><strong>Aplica a:</strong> ${circular.aplicaA}</p>
   `;
+
+  if (circular.pdfStorageKey) {
+    const localPdf = await getLocalPdf(circular.pdfStorageKey);
+    if (localPdf) {
+      const arrayBuffer = await localPdf.arrayBuffer();
+      pdfSource = new Uint8Array(arrayBuffer);
+      objectPdfUrl = URL.createObjectURL(localPdf);
+      openPdf.href = objectPdfUrl;
+      openPdf.style.display = 'inline-block';
+      togglePdfUi(true);
+      refreshPdf();
+      return;
+    }
+  }
 
   setupOpenPdf(circular);
 
@@ -128,6 +149,8 @@ if (!circular) {
   }
 }
 
+initPage();
+
 btnZoomIn?.addEventListener('click', async () => {
   if (!pdfSource) return;
   currentScale = Math.min(maxScale, currentScale + zoomStep);
@@ -143,4 +166,10 @@ btnZoomOut?.addEventListener('click', async () => {
 btnLogout?.addEventListener('click', () => {
   logout();
   window.location.replace('./index.html');
+});
+
+window.addEventListener('beforeunload', () => {
+  if (objectPdfUrl) {
+    URL.revokeObjectURL(objectPdfUrl);
+  }
 });
