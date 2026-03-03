@@ -1,5 +1,13 @@
 import { auth, onAuthStateChanged, signOut } from "./firebase-config.js";
 
+const ADMIN_EMAILS = ["admin@circulares.local"];
+
+const inferRole = (user, claims = {}) => {
+  if (claims.role) return claims.role;
+  if (ADMIN_EMAILS.includes((user?.email || "").toLowerCase())) return "admin";
+  return "tienda";
+};
+
 export const ensureSession = () =>
   new Promise((resolve) => {
     onAuthStateChanged(auth, async (user) => {
@@ -17,7 +25,7 @@ export const ensureSession = () =>
       const currentUser = auth.currentUser;
       await currentUser.getIdToken(true);
       const claims = (await currentUser.getIdTokenResult()).claims;
-      resolve({ user: currentUser, role: claims.role || "tienda" });
+      resolve({ user: currentUser, role: inferRole(currentUser, claims) });
     });
   });
 
