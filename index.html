@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fashion Collection - Tienda Online</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- SweetAlert2 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/@sweetalert2/theme-bootstrap-4/bootstrap-4.css" rel="stylesheet">
+    <style>
+        /* Custom CSS manteniendo tu estilo original */
+        body {
+            background-color: #f8f9fa;
+            font-family: 'Segoe UI', sans-serif;
+        }
+        
+        .header {
+            background-color: #000;
+            color: white;
+            position: sticky;
+            top: 0;
+            z-index: 1020;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .category-card {
+            height: 300px;
+            border-radius: 12px;
+            overflow: hidden;
+            position: relative;
+            transition: all 0.3s ease;
+            background-size: cover;
+            background-position: center;
+            margin-bottom: 24px;
+        }
+        
+        .category-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+        }
+        
+        .category-overlay {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            padding: 20px;
+            background: linear-gradient(to top, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.3) 50%, transparent 100%);
+            color: white;
+        }
+        
+        .hero-section {
+            background: linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.7)), url('img/hero-bg.jpg');
+            background-size: cover;
+            background-position: center;
+            padding: 100px 0;
+            color: white;
+            text-align: center;
+        }
+        
+        .newsletter-section {
+            background-color: #f1f1f1;
+            padding: 60px 0;
+        }
+        
+        footer {
+            background-color: #000;
+            color: white;
+            padding: 40px 0 20px;
+        }
+        
+        .cart-count {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            background-color: #dc3545;
+            color: white;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Auth buttons styles */
+        .auth-buttons .btn {
+            padding: 0.5rem 1.5rem;
+            border-radius: 50px;
+            font-weight: 500;
+        }
+
+        .auth-buttons .btn-outline-light:hover {
+            background-color: rgba(255,255,255,0.1);
+        }
+
+        /* Profile dropdown styles */
+        .profile-dropdown .dropdown-menu {
+            border-radius: 12px;
+            border: none;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        }
+
+        .profile-dropdown .dropdown-item {
+            padding: 0.75rem 1.5rem;
+            font-weight: 500;
+        }
+
+        .profile-dropdown .dropdown-item i {
+            width: 20px;
+            margin-right: 10px;
+            text-align: center;
+        }
+        
+        @media (max-width: 768px) {
+            .hero-section {
+                padding: 60px 0;
+            }
+            
+            .hero-title {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header py-2">
+        <div class="container">
+            <div class="d-flex justify-content-between align-items-center">
+                <div class="d-flex align-items-center">
+                    <a class="navbar-brand me-5" href="index.html">
+                        <h1 class="h4 text-white mb-0">Fashion Collection</h1>
+                    </a>
+                    <nav class="d-none d-md-flex align-items-center">
+                        <a class="text-white text-decoration-none me-5" href="index.html">Inicio</a>
+                        <a class="text-white text-decoration-none me-5" href="categorias.html">Categorías</a>
+                        <a class="text-white text-decoration-none me-5" href="ofertas.html">Ofertas</a>
+                        <a class="text-white text-decoration-none" href="contacto.html">Contacto</a>
+                    </nav>
+                </div>
+                <div class="d-flex align-items-center">
+                    <a href="carrito.html" class="position-relative text-white me-4">
+                        <i class="fas fa-shopping-cart fa-lg"></i>
+                        <span class="cart-badge">0</span>
+                    </a>
+                    
+                    <!-- Auth Buttons (for guests) -->
+                    <div id="auth-buttons" class="auth-buttons d-flex gap-2"><a href="login.html">
+                        <button class="btn btn-outline-light" data-bs-toggle="modal">
+                            Iniciar Sesión
+                        </button> </a> <a href="login.html">
+                        <button class="btn btn-light" data-bs-toggle="modal" >
+                            Registrarse
+                        </button></a>
+                    </div>
+
+                    <!-- Profile Dropdown (for authenticated users) -->
+                    <div id="profile-button" class="profile-dropdown d-none">
+                        <div class="dropdown">
+                            <button class="btn btn-link text-white text-decoration-none dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                <i class="fas fa-user-circle me-1"></i>
+                                <span id="navbar-username">Usuario</span>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end">
+                                <li><a class="dropdown-item" href="perfil.html"><i class="fas fa-user"></i> Mi Perfil</a></li>
+                                <li><a class="dropdown-item" href="pedidos.html"><i class="fas fa-shopping-bag"></i> Mis Pedidos</a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><button class="dropdown-item text-danger" id="logout-btn"><i class="fas fa-sign-out-alt"></i> Cerrar Sesión</button></li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <button class="d-md-none btn text-white ms-3" type="button" data-bs-toggle="collapse" data-bs-target="#mobileMenu">
+                        <i class="fas fa-bars fa-lg"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Mobile Menu -->
+            <div class="collapse d-md-none" id="mobileMenu">
+                <div class="py-3">
+                    <a class="d-block text-white py-2 text-decoration-none" href="index.html">Inicio</a>
+                    <a class="d-block text-white py-2 text-decoration-none" href="categorias.html">Categorías</a>
+                    <a class="d-block text-white py-2 text-decoration-none" href="ofertas.html">Ofertas</a>
+                    <a class="d-block text-white py-2 text-decoration-none" href="contacto.html">Contacto</a>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="hero-section">
+        <div class="container">
+            <h1 class="hero-title display-4 fw-bold mb-4">Explora nuestras categorías</h1>
+            <p class="fs-5 mb-5">Descubre lo mejor en moda y accesorios</p>
+            
+            <div class="row justify-content-center">
+                <div class="col-md-8 col-lg-6">
+                    <div class="input-group">
+                        <input type="text" id="searchProducts" class="form-control rounded-pill py-3 px-4" placeholder="Buscar productos...">
+                        <button class="btn btn-dark rounded-pill position-absolute end-0 top-0 bottom-0 m-1" type="button">
+                            <i class="fas fa-search"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Categories Section -->
+    <section class="py-5">
+        <div class="container">
+            <div class="row g-4" id="categories">
+                <!-- Categories will be dynamically loaded here -->
+            </div>
+        </div>
+    </section>
+
+    <!-- Featured Products Section -->
+    <section class="py-5 bg-light">
+        <div class="container">
+            <h2 class="text-center mb-5">Productos Destacados</h2>
+            <div class="row g-4" id="featured-products">
+                <!-- Featured products will be dynamically loaded here -->
+            </div>
+        </div>
+    </section>
+
+    <!-- Newsletter Section -->
+    <section class="newsletter-section">
+        <div class="container">
+            <div class="row justify-content-center">
+                <div class="col-lg-8 text-center">
+                    <h2 class="display-5 fw-bold mb-3">Suscríbete a nuestro newsletter</h2>
+                    <p class="mb-5">Recibe las últimas novedades y ofertas exclusivas directamente en tu correo.</p>
+                    
+                    <form id="newsletter-form" class="row g-2 justify-content-center">
+                        <div class="col-md-8">
+                            <input type="email" class="form-control form-control-lg" placeholder="Tu correo electrónico" required>
+                        </div>
+                        <div class="col-md-3">
+                            <button type="submit" class="btn btn-primary btn-lg w-100">Suscribirse</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+        <div class="container">
+            <div class="row g-4">
+                <div class="col-md-6 col-lg-3">
+                    <h3 class="h5 text-white mb-4">Fashion Collection</h3>
+                    <p>La mejor selección en moda y accesorios.</p>
+                </div>
+                
+                <div class="col-md-6 col-lg-3">
+                    <h3 class="h5 text-white mb-4">Enlaces rápidos</h3>
+                    <ul class="list-unstyled">
+                        <li class="mb-2"><a href="index.html" class="text-white-50 text-decoration-none">Inicio</a></li>
+                        <li class="mb-2"><a href="productos.html" class="text-white-50 text-decoration-none">Productos</a></li>
+                        <li class="mb-2"><a href="ofertas.html" class="text-white-50 text-decoration-none">Ofertas</a></li>
+                        <li class="mb-2"><a href="contacto.html" class="text-white-50 text-decoration-none">Contacto</a></li>
+                    </ul>
+                </div>
+                
+                <div class="col-md-6 col-lg-3">
+                    <h3 class="h5 text-white mb-4">Ayuda</h3>
+                    <ul class="list-unstyled">
+                        <li class="mb-2"><a href="#" class="text-white-50 text-decoration-none">Envíos</a></li>
+                        <li class="mb-2"><a href="#" class="text-white-50 text-decoration-none">Devoluciones</a></li>
+                        <li class="mb-2"><a href="#" class="text-white-50 text-decoration-none">Preguntas frecuentes</a></li>
+                        <li class="mb-2"><a href="#" class="text-white-50 text-decoration-none">Términos y condiciones</a></li>
+                    </ul>
+                </div>
+                
+                <div class="col-md-6 col-lg-3">
+                    <h3 class="h5 text-white mb-4">Síguenos</h3>
+                    <div class="d-flex gap-3">
+                        <a href="#" class="text-white-50"><i class="fab fa-facebook-f fa-lg"></i></a>
+                        <a href="#" class="text-white-50"><i class="fab fa-instagram fa-lg"></i></a>
+                        <a href="#" class="text-white-50"><i class="fab fa-twitter fa-lg"></i></a>
+                        <a href="#" class="text-white-50"><i class="fab fa-pinterest fa-lg"></i></a>
+                    </div>
+                </div>
+            </div>
+            
+            <hr class="my-4 bg-secondary">
+            
+            <div class="text-center text-white-50">
+                <p class="mb-0">&copy; 2025 Fashion Collection. Todos los derechos reservados.</p>
+            </div>
+        </div>
+    </footer>
+    <!-- Toast Container -->
+    <div class="toast-container position-fixed bottom-0 end-0 p-3">
+        <div id="toast-notification" class="toast align-items-center text-white bg-success border-0" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="d-flex">
+                <div class="toast-body"></div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-storage.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    
+    <!-- Application Scripts -->
+    <script src="firebase-config.js"></script>
+    <script src="auth.js"></script>
+    <script src="products.js"></script>
+    <script src="cart.js"></script>
+    <script src="orders.js"></script>
+    <script src="app.js"></script>
+    <script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-app.js";
+  import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-auth.js";
+  import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyBTBThm-mVNiZegeOh3NSB82LAuxngHMlQ",
+    authDomain: "fashioncollectionhn.firebaseapp.com",
+    projectId: "fashioncollectionhn",
+    storageBucket: "fashioncollectionhn.firebasestorage.app",
+    messagingSenderId: "708344016118",
+    appId: "1:708344016118:web:1efda662c75fed7f25d0d7",
+    measurementId: "G-69R77Y9HMV"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db = getFirestore(app);
+
+
+</script>
+</body>
+</html>
