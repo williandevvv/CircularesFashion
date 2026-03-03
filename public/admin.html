@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Circulares | Admin</title>
+    <link rel="stylesheet" href="./css/styles.css" />
+  </head>
+  <body>
+    <div class="app-layout">
+      <aside class="sidebar">
+        <div class="brand">
+          <h1>Circulares</h1>
+          <p>Panel administrativo</p>
+        </div>
+        <nav class="nav-links">
+          <a href="./index.html">Dashboard</a>
+          <a href="./admin.html" class="active">Panel Admin</a>
+          <button id="logoutBtn" class="ghost-btn">Cerrar sesión</button>
+        </nav>
+      </aside>
+
+      <main class="content">
+        <header class="topbar card">
+          <h2>Nueva circular</h2>
+          <p>Sube el PDF y deja que el sistema detecte los códigos automáticamente.</p>
+        </header>
+
+        <section class="card form-card">
+          <form id="circularForm">
+            <div class="form-grid">
+              <label>
+                Número de circular
+                <input type="text" id="numero" required />
+              </label>
+              <label>
+                Departamento
+                <input type="text" id="departamento" required />
+              </label>
+              <label>
+                Fecha
+                <input type="date" id="fecha" required />
+              </label>
+              <label>
+                Aplica a
+                <select id="aplicaA" required>
+                  <option value="todas">Todas</option>
+                  <option value="mall">Mall</option>
+                  <option value="centro">Centro</option>
+                  <option value="tiendas-especificas">Tiendas específicas</option>
+                </select>
+              </label>
+              <label class="full-width">
+                PDF
+                <input type="file" id="pdf" accept="application/pdf" required />
+              </label>
+            </div>
+
+            <button class="primary-btn" type="submit">Crear circular</button>
+            <p id="statusMessage"></p>
+          </form>
+        </section>
+      </main>
+    </div>
+
+    <script type="module" src="./js/admin.js"></script>
+  </body>
+</html>
