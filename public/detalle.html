@@ -22,7 +22,20 @@
         <div id="pdfWrap" class="actions"></div>
       </section>
 
-      <section class="panel">
+      <section class="card">
+        <h2>Vista del PDF</h2>
+        <div id="pdfActions" class="actions">
+          <button id="zoomOut" class="btn btn-secondary" type="button">-</button>
+          <button id="zoomIn" class="btn" type="button">+</button>
+          <a id="openPdf" class="btn" target="_blank" rel="noopener">Abrir PDF</a>
+        </div>
+        <div id="pdfViewer" class="pdf-viewer"></div>
+        <p id="pdfFallback" style="display:none;">
+          Esta circular no tiene PDF asociado.
+        </p>
+      </section>
+
+      <section id="tableSection" class="panel">
         <h2>Tabla de códigos</h2>
         <div class="table-wrap">
           <table>
@@ -43,6 +56,11 @@
     </main>
   </div>
 
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.2.67/pdf.min.js"></script>
+  <script>
+    pdfjsLib.GlobalWorkerOptions.workerSrc =
+      'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.2.67/pdf.worker.min.js';
+  </script>
   <script type="module" src="./js/detalle.js"></script>
 </body>
 </html>
