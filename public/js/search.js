@@ -46,7 +46,8 @@ function matchCircular(circular, term, department) {
   if (!depOk) return false;
   if (!normalized) return true;
 
-  const byCode = circular.codigos.some((c) => c.toUpperCase().includes(normalized));
+  const codes = Array.isArray(circular.codigos) ? circular.codigos : [];
+  const byCode = codes.some((c) => String(c).toUpperCase().includes(normalized));
   const byNumber = circular.numero.toUpperCase().includes(normalized);
   const byDepartment = circular.departamento.toUpperCase().includes(normalized);
 
@@ -75,6 +76,7 @@ function renderResults() {
           <a class="btn" href="./detalle.html?id=${c.id}">Ver detalle</a>
           ${c.pdfLink ? `<a class="btn btn-secondary" href="${c.pdfLink}" target="_blank" rel="noopener">Ver PDF</a>` : ''}
         </div>
+        ${Array.isArray(c.previewImages) && c.previewImages.length ? `<img src="${c.previewImages[0]}" alt="Vista previa ${c.numero}" loading="lazy" />` : ''}
       </article>
     `
     )
