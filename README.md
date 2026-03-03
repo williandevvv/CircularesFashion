@@ -14,6 +14,7 @@ Este proyecto está preparado para correr como sitio estático en GitHub Pages y
 - La autenticación usa `localStorage`.
 - La sesión activa también se guarda en `localStorage`.
 - Las circulares se guardan en `localStorage` bajo una base local simple.
+- Los PDFs locales se guardan en `IndexedDB` para evitar límite de tamaño de `localStorage` y permitir vista previa estable.
 - Si en `admin.html` el usuario no tiene rol `admin`, se redirige de inmediato a `index.html`.
 
 ## Usuarios por defecto
