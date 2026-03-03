@@ -1,16 +1,12 @@
-import { getCircularById, updateCircular } from './db-local.js';
+import { getCircularById } from './db-local.js';
 import { currentSession, logout } from './auth.js';
 
 const params = new URLSearchParams(window.location.search);
 const id = params.get('id');
 
 const metaEl = document.getElementById('meta');
-const tableBody = document.getElementById('tablaBody');
-const btnSave = document.getElementById('btnSave');
-const pdfWrap = document.getElementById('pdfWrap');
 const btnLogout = document.getElementById('btnLogout');
 const userBadge = document.getElementById('userBadge');
-const tableSection = document.getElementById('tableSection');
 
 const pdfViewer = document.getElementById('pdfViewer');
 const pdfFallback = document.getElementById('pdfFallback');
@@ -19,7 +15,7 @@ const btnZoomOut = document.getElementById('zoomOut');
 const btnZoomIn = document.getElementById('zoomIn');
 const openPdf = document.getElementById('openPdf');
 
-let pdfUrl = '';
+let pdfSource = '';
 let pdfDoc = null;
 let currentScale = 1.2;
 const zoomStep = 0.15;
@@ -51,10 +47,21 @@ function togglePdfUi(hasPdf) {
   pdfActions.style.display = hasPdf ? 'flex' : 'none';
   pdfViewer.style.display = hasPdf ? 'block' : 'none';
   pdfFallback.style.display = hasPdf ? 'none' : 'block';
-  tableSection.style.display = hasPdf ? 'none' : 'block';
 }
 
-async function renderPdfFromUrl(url) {
+function setupOpenPdf(circular) {
+  if (circular.pdfLink) {
+    openPdf.href = circular.pdfLink;
+    openPdf.style.display = 'inline-block';
+    return;
+  }
+
+  openPdf.removeAttribute('href');
+  openPdf.style.display = 'none';
+}
+
+async function renderPdf() {
+  if (!pdfSource) return;
   if (!window.pdfjsLib) {
     throw new Error('PDF.js no está disponible.');
   }
@@ -62,7 +69,7 @@ async function renderPdfFromUrl(url) {
   pdfViewer.innerHTML = '';
   pdfDoc = null;
 
-  const loadingTask = window.pdfjsLib.getDocument(url);
+  const loadingTask = window.pdfjsLib.getDocument(pdfSource);
   pdfDoc = await loadingTask.promise;
 
   for (let pageNumber = 1; pageNumber <= pdfDoc.numPages; pageNumber += 1) {
@@ -82,10 +89,8 @@ async function renderPdfFromUrl(url) {
 }
 
 async function refreshPdf() {
-  if (!pdfUrl) return;
-
   try {
-    await renderPdfFromUrl(pdfUrl);
+    await renderPdf();
   } catch (error) {
     console.error('Error al renderizar PDF:', error);
     pdfViewer.innerHTML = '<p class="error">No se pudo cargar la vista previa del PDF.</p>';
@@ -95,7 +100,6 @@ async function refreshPdf() {
 const circular = getCircularById(id);
 if (!circular) {
   metaEl.innerHTML = '<p>No se encontró la circular.</p>';
-  btnSave.disabled = true;
   togglePdfUi(false);
 } else {
   metaEl.innerHTML = `
@@ -105,24 +109,14 @@ if (!circular) {
     <p><strong>Aplica a:</strong> ${circular.aplicaA}</p>
   `;
 
-  tableBody.innerHTML = circular.tabla
-    .map(
-      (row, index) => `
-      <tr>
-        <td>${row.codigo}</td>
-        <td><input data-field="descripcion" data-index="${index}" value="${row.descripcion || ''}"></td>
-        <td><input data-field="precioAnterior" data-index="${index}" value="${row.precioAnterior || ''}"></td>
-        <td><input data-field="precioNuevo" data-index="${index}" value="${row.precioNuevo || ''}"></td>
-        <td><input data-field="observaciones" data-index="${index}" value="${row.observaciones || ''}"></td>
-      </tr>
-    `
-    )
-    .join('');
+  setupOpenPdf(circular);
 
-  if (circular.pdfLink) {
-    pdfUrl = normalizePdfLink(circular.pdfLink);
-    openPdf.href = pdfUrl;
-    pdfWrap.innerHTML = `<a class="btn" href="${pdfUrl}" target="_blank" rel="noopener">Ver PDF</a>`;
+  if (circular.pdfDataUrl) {
+    pdfSource = circular.pdfDataUrl;
+    togglePdfUi(true);
+    refreshPdf();
+  } else if (circular.pdfLink) {
+    pdfSource = normalizePdfLink(circular.pdfLink);
     togglePdfUi(true);
     refreshPdf();
   } else {
@@ -131,34 +125,15 @@ if (!circular) {
 }
 
 btnZoomIn?.addEventListener('click', async () => {
-  if (!pdfUrl) return;
+  if (!pdfSource) return;
   currentScale = Math.min(maxScale, currentScale + zoomStep);
   await refreshPdf();
 });
 
 btnZoomOut?.addEventListener('click', async () => {
-  if (!pdfUrl) return;
+  if (!pdfSource) return;
   currentScale = Math.max(minScale, currentScale - zoomStep);
   await refreshPdf();
-});
-
-btnSave?.addEventListener('click', () => {
-  if (!circular) return;
-  const tablaActualizada = circular.tabla.map((row, index) => {
-    const inputBy = (field) =>
-      document.querySelector(`input[data-field="${field}"][data-index="${index}"]`)?.value?.trim() || '';
-
-    return {
-      ...row,
-      descripcion: inputBy('descripcion'),
-      precioAnterior: inputBy('precioAnterior'),
-      precioNuevo: inputBy('precioNuevo'),
-      observaciones: inputBy('observaciones')
-    };
-  });
-
-  updateCircular(circular.id, { tabla: tablaActualizada });
-  alert('Cambios guardados.');
 });
 
 btnLogout?.addEventListener('click', () => {
