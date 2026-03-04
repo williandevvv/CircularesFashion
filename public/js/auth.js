@@ -10,7 +10,7 @@ let sessionCache = null;
 
 const AUTH_INVALID_CREDENTIAL_CODES = new Set(['auth/wrong-password', 'auth/user-not-found']);
 const PROFILE_LOAD_ERROR_MESSAGE =
-  'No se pudo cargar el perfil del usuario (rol). Revisa conexión, reglas o que exista el doc users/{uid}.';
+  'No se pudo cargar el perfil (rol) desde Firestore. Revisa Firestore Database, reglas o conexión.';
 const PROFILE_MISSING_ERROR_MESSAGE =
   'Tu usuario no tiene perfil en Firestore (users/{uid}). Pide al admin que te cree el rol.';
 
@@ -91,8 +91,9 @@ export async function currentSession() {
 
 export async function login(email, password) {
   try {
-    await signInWithEmailAndPassword(auth, email, password);
-    const session = await currentSession();
+    const credential = await signInWithEmailAndPassword(auth, email, password);
+    const session = await buildSession(credential.user);
+    sessionCache = session;
     return { ok: true, user: session };
   } catch (error) {
     if (AUTH_INVALID_CREDENTIAL_CODES.has(error?.code)) {

@@ -107,7 +107,7 @@ loginForm?.addEventListener('submit', async (event) => {
 
   const res = await login(email, password);
   if (!res.ok) {
-    loginError.textContent = 'Credenciales inválidas.';
+    loginError.textContent = res.message || 'No se pudo iniciar sesión.';
   }
 });
 
