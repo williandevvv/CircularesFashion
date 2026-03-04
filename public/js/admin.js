@@ -8,7 +8,7 @@ import {
   updateCircular
 } from './db-firebase.js';
 import { deletePdfByPath, uploadPdf } from './storage-adapter.js';
-import { createUserFromAdminPanel, currentSession, listenSession, logout } from './auth.js';
+import { clearAdminAccess, validateAdminPassword } from './admin-access.js';
 
 const form = document.getElementById('circular-form');
 const formTitle = document.getElementById('formTitle');
@@ -19,14 +19,21 @@ const pdfStatus = document.getElementById('pdfStatus');
 const codigosInput = document.getElementById('codigos');
 const circularesList = document.getElementById('circularesList');
 const adminMessage = document.getElementById('adminMessage');
-const userBadge = document.getElementById('userBadge');
 const btnLogout = document.getElementById('btnLogout');
 const menuToggle = document.querySelector('.mobile-menu-toggle');
-const userForm = document.getElementById('user-form');
-const userMessage = document.getElementById('userMessage');
 
 let editingId = null;
 let cachedCirculares = [];
+
+function confirmAdminPassword(actionLabel) {
+  const password = window.prompt(`Ingresa la clave para ${actionLabel}:`);
+  if (password === null) return false;
+  const valid = validateAdminPassword(password.trim());
+  if (!valid) {
+    alert('Clave incorrecta.');
+  }
+  return valid;
+}
 
 function normalizeCodes(rawCodes = []) {
   return [...new Set(rawCodes
@@ -42,11 +49,6 @@ function parseCodesFromText(value = '') {
 
 function showMessage(message = '') {
   adminMessage.textContent = message;
-}
-
-
-function showUserMessage(message = '') {
-  if (userMessage) userMessage.textContent = message;
 }
 
 function updateEditUI() {
@@ -176,11 +178,8 @@ async function refreshCirculares() {
 form?.addEventListener('submit', async (event) => {
   event.preventDefault();
 
-  const session = await currentSession();
-  if (!session || session.role !== 'admin') {
-    alert('Solo administradores pueden guardar circulares.');
-    return;
-  }
+  const action = editingId ? 'editar la circular' : 'agregar la circular';
+  if (!confirmAdminPassword(action)) return;
 
   const data = new FormData(form);
   const numero = String(data.get('numero') || '').trim();
@@ -261,7 +260,7 @@ form?.addEventListener('submit', async (event) => {
       codigos,
       pdfUrl: uploaded.pdfUrl,
       storagePath: uploaded.storagePath,
-      createdBy: session.uid
+      createdBy: 'admin-clave'
     }, circularId);
 
     showMessage('Circular guardada.');
@@ -281,12 +280,15 @@ circularesList?.addEventListener('click', async (event) => {
 
   const editId = target.dataset.editId;
   if (editId) {
+    if (!confirmAdminPassword('editar esta circular')) return;
     startEdit(editId);
     return;
   }
 
   const id = target.dataset.deleteId;
   if (!id) return;
+
+  if (!confirmAdminPassword('eliminar esta circular')) return;
 
   const confirmed = window.confirm('¿Seguro que quieres eliminar esta circular? Esta acción no se puede deshacer.');
   if (!confirmed) return;
@@ -313,33 +315,8 @@ circularesList?.addEventListener('click', async (event) => {
 
 cancelEditButton?.addEventListener('click', cancelEdit);
 
-userForm?.addEventListener('submit', async (event) => {
-  event.preventDefault();
-  showUserMessage('');
-
-  const data = new FormData(userForm);
-  const nombre = String(data.get('nombre') || '').trim();
-  const correo = String(data.get('correo') || '').trim();
-  const password = String(data.get('password') || '').trim();
-  const role = String(data.get('role') || '').trim();
-
-  if (!nombre || !correo || !password || !role) {
-    showUserMessage('Completa todos los campos para crear el usuario.');
-    return;
-  }
-
-  try {
-    await createUserFromAdminPanel({ nombre, correo, password, role });
-    showUserMessage(`Usuario ${correo} creado correctamente con rol ${role}.`);
-    userForm.reset();
-  } catch (error) {
-    console.error(error);
-    showUserMessage(error?.message || 'No se pudo crear el usuario.');
-  }
-});
-
-btnLogout?.addEventListener('click', async () => {
-  await logout();
+btnLogout?.addEventListener('click', () => {
+  clearAdminAccess();
   window.location.replace('./index.html');
 });
 
@@ -347,13 +324,8 @@ menuToggle?.addEventListener('click', () => {
   document.body.classList.toggle('sidebar-open');
 });
 
-listenSession(async (session) => {
-  if (!session || session.role !== 'admin') {
-    window.location.replace('./index.html');
-    return;
-  }
-
-  userBadge.textContent = `${session.email} (${session.role})`;
-  updateEditUI();
-  await refreshCirculares();
+updateEditUI();
+refreshCirculares().catch((error) => {
+  console.error(error);
+  showMessage('No se pudieron cargar las circulares.');
 });

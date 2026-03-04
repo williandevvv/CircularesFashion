@@ -1,8 +1,6 @@
-import { listenSession } from './auth.js';
+import { ensureAdminAccess } from './admin-access.js';
 
-listenSession((session) => {
-  const isAdmin = Boolean(session?.isActive) && session?.role === 'admin';
-  if (!isAdmin) {
-    window.location.replace('./index.html');
-  }
-});
+const hasAccess = ensureAdminAccess('Ingresa la clave para entrar al panel de admin:');
+if (!hasAccess) {
+  window.location.replace('./index.html');
+}
