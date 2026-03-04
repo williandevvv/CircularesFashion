@@ -1,5 +1,5 @@
 export const APP_MODE = {
-  auth: 'local',
-  db: 'local',
-  storage: 'local'
+  auth: 'firebase',
+  db: 'firebase',
+  storage: 'firebase'
 };
