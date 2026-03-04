@@ -16,6 +16,7 @@ import {
 import { APP_MODE } from './app-config.js';
 
 let sessionCache = null;
+const SESSION_CACHE_KEY = 'circulares.session.cache';
 const isTemporaryLoginDisabled = APP_MODE.tempDisableLogin === true;
 const TEMP_ADMIN_SESSION = {
   uid: '0eCLNvOvtbQg5ZwGRkaA8lB1NlA2',
@@ -72,6 +73,29 @@ function isRetryableFirestoreError(error) {
     message.includes('timed out') ||
     message.includes('timeout')
   );
+}
+
+function saveSessionCache(session) {
+  if (typeof window === 'undefined' || !window.localStorage) return;
+
+  if (!session) {
+    window.localStorage.removeItem(SESSION_CACHE_KEY);
+    return;
+  }
+
+  window.localStorage.setItem(SESSION_CACHE_KEY, JSON.stringify(session));
+}
+
+function getStoredSessionCache() {
+  if (typeof window === 'undefined' || !window.localStorage) return null;
+
+  try {
+    const parsed = JSON.parse(window.localStorage.getItem(SESSION_CACHE_KEY) || 'null');
+    if (!parsed || typeof parsed !== 'object') return null;
+    return parsed;
+  } catch {
+    return null;
+  }
 }
 
 async function loadUserProfileDoc(uid) {
@@ -131,7 +155,16 @@ export async function getUserRole(uid) {
 async function buildSession(user) {
   if (!user) return null;
 
-  const userDoc = await loadUserProfileDoc(user.uid);
+  let userDoc;
+  try {
+    userDoc = await loadUserProfileDoc(user.uid);
+  } catch (error) {
+    const cachedSession = getStoredSessionCache();
+    if (isRetryableFirestoreError(error) && cachedSession?.uid === user.uid) {
+      return cachedSession;
+    }
+    throw error;
+  }
 
   if (!userDoc.exists()) {
     const missingProfileError = new Error(PROFILE_MISSING_ERROR_MESSAGE);
@@ -140,15 +173,19 @@ async function buildSession(user) {
   }
 
   const profile = userDoc.data();
-  const role = await getUserRole(user.uid);
+  const normalizedRole = String(profile?.role || '').toLowerCase();
+  const role = ROLES.has(normalizedRole) ? normalizedRole : 'usuario';
 
-  return {
+  const nextSession = {
     uid: user.uid,
     email: user.email || profile.email || '',
     role,
     displayName: profile.displayName || profile.displayname || user.displayName || '',
     isActive: profile.isActive !== false
   };
+
+  saveSessionCache(nextSession);
+  return nextSession;
 }
 
 export async function createDefaultUsers() {
@@ -221,9 +258,16 @@ export function listenSession(callback) {
   return onAuthStateChanged(auth, async (user) => {
     try {
       sessionCache = await buildSession(user);
+      if (!sessionCache) {
+        saveSessionCache(null);
+      }
       callback(sessionCache);
     } catch (error) {
-      console.error('No se pudo cargar el perfil del usuario.', error);
+      if (isRetryableFirestoreError(error)) {
+        console.warn('Sin conexión con Firestore. Se mantiene sesión local si existe.');
+      } else {
+        console.error('No se pudo cargar el perfil del usuario.', error);
+      }
       sessionCache = null;
       callback(null);
     }
@@ -290,6 +334,7 @@ export async function logout() {
 
   await signOut(auth);
   sessionCache = null;
+  saveSessionCache(null);
 }
 
 export async function createUserFromAdminPanel({ nombre, correo, password, role }) {
