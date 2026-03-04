@@ -1,82 +1,120 @@
 # Circulares Fashion (Firebase)
 
-Este proyecto usa Firebase Authentication + Firestore + Storage para gestionar acceso, metadatos de circulares y PDFs.
+Este proyecto usa **Firebase Authentication + Firestore + Storage** para el login, los usuarios y las circulares.
 
-## Estructura
+## Estado actual del login
 
-- `/index.html` (raíz): redirige a `/public/index.html`.
-- `/public/index.html`: login + buscador de circulares.
-- `/public/admin.html`: panel para crear/editar/eliminar circulares (solo admin).
-- `/public/detalle.html`: vista de detalle con visor PDF (`iframe`).
+Se dejó el login reforzado para que funcione incluso cuando existe el usuario en Firebase Auth pero **falta su perfil** en Firestore (`users/{uid}`).
 
-## Configuración Firebase
+- Si el perfil falta al iniciar sesión, la app lo repara automáticamente.
+- Para usuarios por defecto, también restaura el rol correcto (`admin` o `auditor`) cuando corresponde.
 
-En `public/js/app-config.js` el modo está en Firebase:
+---
+
+## Qué tienes que hacer (paso a paso)
+
+## 1) Instalar dependencias de Functions (opcional para despliegue)
+
+```bash
+cd functions
+npm install
+cd ..
+```
+
+## 2) Verificar configuración de Firebase
+
+Archivo: `public/js/firebase-config.js`
+
+Debes confirmar que estos valores son de tu proyecto real:
+
+- `apiKey`
+- `authDomain`
+- `projectId`
+- `storageBucket`
+- `messagingSenderId`
+- `appId`
+
+## 3) Verificar modo de aplicación
+
+Archivo: `public/js/app-config.js`
+
+Debe estar así para login normal:
 
 ```js
 export const APP_MODE = {
   auth: "firebase",
   db: "firebase",
   storage: "firebase",
-  tempDisableLogin: true
+  tempDisableLogin: false
 };
 ```
 
-> `tempDisableLogin: true` habilita acceso temporal sin login (sesión admin local) para priorizar carga de circulares. Volver a `false` para restablecer autenticación normal.
+> Si pones `tempDisableLogin: true`, se saltará el login y entrará con sesión temporal admin.
 
-La configuración base está en `public/js/firebase-config.js` usando SDK modular CDN.
+## 4) Configurar Authentication en Firebase Console
 
-## Modelo de datos
+1. Ve a **Firebase Console > Authentication > Sign-in method**.
+2. Activa **Email/Password**.
+3. Guarda cambios.
 
-### Firestore
+## 5) Configurar Firestore Database
 
-Colección `circulares/{id}`:
+1. Ve a **Firebase Console > Firestore Database**.
+2. Crea la base si no existe.
+3. Asegúrate de tener colección `users`.
 
-- `numero`
-- `departamento`
-- `fecha`
-- `aplicaA`
-- `codigos`
-- `pdfUrl`
-- `storagePath`
-- `createdAt`
-- `updatedAt`
-- `createdBy`
+Estructura mínima de cada perfil:
 
-Colección `users/{uid}`:
+- `users/{uid}`
+  - `email: string`
+  - `displayname: string`
+  - `role: "admin" | "auditor" | "usuario"`
+  - `isActive: boolean`
 
-- `role`
-- `email`
-- `isActive`
-- `displayName`
+## 6) Configurar reglas de Firestore
 
-## Rol admin (seed inicial)
+Publica `firestore.rules`:
 
-Asegura que exista este documento en Firestore para habilitar acceso a `admin.html`:
+```bash
+firebase deploy --only firestore:rules
+```
 
-- `users/hpcMP8pI8kUOMhLzdRnBqoBssjy2`
-- `role = "admin"`
+## 7) Levantar proyecto local
 
-El guard de admin valida por rol desde Firestore (no por UID hardcodeado).
-
-## Flujo
-
-1. Iniciar sesión en `/public/index.html`.
-2. Si `users/{uid}.role === "admin"`, se habilita botón Admin.
-3. En Admin:
-   - crear/editar circular,
-   - subir/reemplazar PDF en Storage,
-   - guardar `pdfUrl` y `storagePath` en Firestore,
-   - eliminar circular y su PDF en Storage.
-4. En Detalle:
-   - se carga el documento desde Firestore,
-   - se muestra PDF real en `iframe`,
-   - botón **Abrir PDF** en nueva pestaña.
-
-## Ejecutar localmente
+Desde la raíz:
 
 ```bash
 python3 -m http.server 8080
 ```
 
-Abrir: `http://localhost:8080/public/index.html`.
+Abrir:
+
+- `http://localhost:8080/public/index.html`
+
+## 8) Probar login
+
+Usuarios por defecto:
+
+- `admin@circulares.fs` / `Admin123!`
+- `auditor@circulares.fs` / `Auditor123!`
+
+Si el usuario existe en Auth pero no en Firestore, ahora se crea el perfil automáticamente al login.
+
+---
+
+## Solución de problemas
+
+- **“Credenciales inválidas”**: correo o contraseña incorrectos.
+- **Error de perfil/rol**: revisar Firestore y reglas.
+- **No carga datos**: verificar conectividad y que Firestore tenga la colección `circulares`.
+
+---
+
+## Estructura principal
+
+- `/index.html` (raíz): redirige a `/public/index.html`.
+- `/public/index.html`: login + buscador de circulares.
+- `/public/admin.html`: panel admin.
+- `/public/detalle.html`: detalle con visor PDF.
+- `/public/js/auth.js`: autenticación, sesión, bootstrap y reparación de perfil.
+

@@ -88,6 +88,37 @@ async function loadUserProfileDoc(uid) {
   }
 }
 
+function resolveDefaultProfileByEmail(email) {
+  const normalizedEmail = String(email || '').trim().toLowerCase();
+  return DEFAULT_USERS.find((user) => user.email.toLowerCase() === normalizedEmail) || null;
+}
+
+async function ensureProfileDocForUser(user, fallbackProfile = null) {
+  if (!user?.uid) {
+    throw new Error('No se pudo crear perfil de usuario: sesión inválida.');
+  }
+
+  const existing = await loadUserProfileDoc(user.uid);
+  if (existing.exists()) {
+    return existing;
+  }
+
+  const defaultProfile = fallbackProfile || resolveDefaultProfileByEmail(user.email);
+
+  await setDoc(doc(db, 'users', user.uid), {
+    email: user.email || defaultProfile?.email || '',
+    displayname:
+      defaultProfile?.displayname ||
+      user.displayName ||
+      (user.email ? String(user.email).split('@')[0] : 'Usuario'),
+    role: defaultProfile?.role || 'usuario',
+    isActive: true,
+    createdAt: serverTimestamp()
+  }, { merge: true });
+
+  return await loadUserProfileDoc(user.uid);
+}
+
 export async function getUserRole(uid) {
   if (!uid) return 'usuario';
   const userDoc = await loadUserProfileDoc(uid);
@@ -156,6 +187,16 @@ export async function createDefaultUsers() {
         if (error?.code !== 'auth/email-already-in-use') {
           throw error;
         }
+
+        // Si el usuario ya existe en Auth, intentamos iniciar sesión para asegurar
+        // que su perfil en Firestore exista y tenga el rol esperado.
+        const existingCredential = await signInWithEmailAndPassword(
+          secondaryAuth,
+          defaultUser.email,
+          defaultUser.password
+        );
+
+        await ensureProfileDocForUser(existingCredential.user, defaultUser);
       } finally {
         await signOut(secondaryAuth).catch(() => {});
         await deleteApp(secondaryApp);
@@ -210,9 +251,20 @@ export async function login(email, password) {
 
   try {
     const credential = await signInWithEmailAndPassword(auth, email, password);
-    const session = await buildSession(credential.user);
-    sessionCache = session;
-    return { ok: true, user: session };
+    try {
+      const session = await buildSession(credential.user);
+      sessionCache = session;
+      return { ok: true, user: session };
+    } catch (error) {
+      if (error?.code !== 'profile/not-found') {
+        throw error;
+      }
+
+      await ensureProfileDocForUser(credential.user);
+      const session = await buildSession(credential.user);
+      sessionCache = session;
+      return { ok: true, user: session, repairedProfile: true };
+    }
   } catch (error) {
     if (AUTH_INVALID_CREDENTIAL_CODES.has(error?.code)) {
       return { ok: false, message: 'Credenciales inválidas' };
