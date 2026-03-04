@@ -14,8 +14,15 @@ Este proyecto usa Firebase Authentication + Firestore + Storage para gestionar a
 En `public/js/app-config.js` el modo está en Firebase:
 
 ```js
-export const APP_MODE = { auth: "firebase", db: "firebase", storage: "firebase" };
+export const APP_MODE = {
+  auth: "firebase",
+  db: "firebase",
+  storage: "firebase",
+  tempDisableLogin: true
+};
 ```
+
+> `tempDisableLogin: true` habilita acceso temporal sin login (sesión admin local) para priorizar carga de circulares. Volver a `false` para restablecer autenticación normal.
 
 La configuración base está en `public/js/firebase-config.js` usando SDK modular CDN.
 

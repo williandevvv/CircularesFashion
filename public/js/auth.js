@@ -13,8 +13,17 @@ import {
   serverTimestamp,
   setDoc
 } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js';
+import { APP_MODE } from './app-config.js';
 
 let sessionCache = null;
+const isTemporaryLoginDisabled = APP_MODE.tempDisableLogin === true;
+const TEMP_ADMIN_SESSION = {
+  uid: 'temp-admin-session',
+  email: 'admin.temporal@circulares.local',
+  role: 'admin',
+  displayName: 'Admin temporal',
+  isActive: true
+};
 
 const AUTH_INVALID_CREDENTIAL_CODES = new Set(['auth/wrong-password', 'auth/user-not-found']);
 const PROFILE_LOAD_ERROR_MESSAGE =
@@ -104,6 +113,10 @@ async function buildSession(user) {
 }
 
 export async function createDefaultAdmin() {
+  if (isTemporaryLoginDisabled) {
+    return { ok: true, skipped: true, reason: 'temp-login-disabled' };
+  }
+
   const bootstrapKey = 'circulares.default-admin.bootstrap.done';
   if (window.localStorage.getItem(bootstrapKey) === '1') {
     return { ok: true, skipped: true };
@@ -144,6 +157,12 @@ export async function createDefaultAdmin() {
 }
 
 export function listenSession(callback) {
+  if (isTemporaryLoginDisabled) {
+    sessionCache = { ...TEMP_ADMIN_SESSION };
+    callback(sessionCache);
+    return () => {};
+  }
+
   return onAuthStateChanged(auth, async (user) => {
     try {
       sessionCache = await buildSession(user);
@@ -157,6 +176,11 @@ export function listenSession(callback) {
 }
 
 export async function currentSession() {
+  if (isTemporaryLoginDisabled) {
+    sessionCache = { ...TEMP_ADMIN_SESSION };
+    return sessionCache;
+  }
+
   if (auth.currentUser) {
     sessionCache = await buildSession(auth.currentUser);
     return sessionCache;
@@ -165,6 +189,11 @@ export async function currentSession() {
 }
 
 export async function login(email, password) {
+  if (isTemporaryLoginDisabled) {
+    sessionCache = { ...TEMP_ADMIN_SESSION };
+    return { ok: true, user: sessionCache, skipped: true };
+  }
+
   try {
     const credential = await signInWithEmailAndPassword(auth, email, password);
     const session = await buildSession(credential.user);
@@ -188,6 +217,11 @@ export async function login(email, password) {
 }
 
 export async function logout() {
+  if (isTemporaryLoginDisabled) {
+    sessionCache = { ...TEMP_ADMIN_SESSION };
+    return;
+  }
+
   await signOut(auth);
   sessionCache = null;
 }
