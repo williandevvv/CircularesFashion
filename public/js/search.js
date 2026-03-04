@@ -1,11 +1,7 @@
 import { listCirculares } from './db-firebase.js';
-import { createDefaultUsers, listenSession, login, logout } from './auth.js';
-import { APP_MODE } from './app-config.js';
+import { clearAdminAccess, requestAdminAccess } from './admin-access.js';
 
-const loginView = document.getElementById('loginView');
 const appView = document.getElementById('appView');
-const loginForm = document.getElementById('loginForm');
-const loginError = document.getElementById('loginError');
 const btnLogout = document.getElementById('btnLogout');
 const btnAdmin = document.getElementById('btnAdmin');
 const userBadge = document.getElementById('userBadge');
@@ -17,31 +13,12 @@ const searchInput = document.getElementById('searchInput');
 const departmentFilter = document.getElementById('departmentFilter');
 const cardsContainer = document.getElementById('cardsContainer');
 
-let session = null;
 let circulares = [];
 
 function showView() {
-  if (APP_MODE.tempDisableLogin === true) {
-    loginView.classList.add('hidden');
-    appView.classList.remove('hidden');
-    btnLogout?.classList.add('hidden');
-    mobileLogout?.classList.add('hidden');
-    btnAdmin?.classList.remove('hidden');
-    userBadge.textContent = 'Acceso temporal sin login (modo admin)';
-    setupFilters();
-    renderResults();
-    return;
-  }
-
-  const isLogged = Boolean(session);
-  loginView.classList.toggle('hidden', isLogged);
-  appView.classList.toggle('hidden', !isLogged);
-  mobileLogout?.classList.toggle('hidden', !isLogged);
-
-  if (!isLogged) return;
-
-  userBadge.textContent = `${session.email} (${session.role})`;
-  btnAdmin.classList.toggle('hidden', session.role !== 'admin');
+  appView?.classList.remove('hidden');
+  btnAdmin?.classList.remove('hidden');
+  userBadge.textContent = 'Consulta pública de circulares';
   setupFilters();
   renderResults();
 }
@@ -99,57 +76,36 @@ function renderResults() {
 
 async function refreshCirculares() {
   circulares = await listCirculares();
-  if (session) {
-    setupFilters();
-    renderResults();
-  }
+  setupFilters();
+  renderResults();
 }
 
-async function handleLogout() {
-  await logout();
-  session = null;
-  document.body.classList.remove('sidebar-open');
-  showView();
+function handleExitAdminMode() {
+  clearAdminAccess();
+  window.alert('Clave de admin eliminada para esta sesión.');
 }
 
-loginForm?.addEventListener('submit', async (event) => {
-  event.preventDefault();
-  loginError.textContent = '';
-  const data = new FormData(loginForm);
-  const email = String(data.get('email') || '').trim();
-  const password = String(data.get('password') || '').trim();
-
-  const res = await login(email, password);
-  if (!res.ok) {
-    loginError.textContent = res.message || 'No se pudo iniciar sesión.';
-  }
-});
+function openAdmin() {
+  const ok = requestAdminAccess('Ingresa la clave para entrar al panel de admin:');
+  if (!ok) return;
+  window.location.href = './admin.html';
+}
 
 searchInput?.addEventListener('input', renderResults);
 departmentFilter?.addEventListener('change', renderResults);
 
-btnLogout?.addEventListener('click', handleLogout);
-mobileLogout?.addEventListener('click', handleLogout);
+btnLogout?.addEventListener('click', handleExitAdminMode);
+mobileLogout?.addEventListener('click', handleExitAdminMode);
 
-btnAdmin?.addEventListener('click', () => {
-  window.location.href = './admin.html';
-});
-
-btnPriorityUpload?.addEventListener('click', () => {
-  window.location.href = './admin.html';
-});
+btnAdmin?.addEventListener('click', openAdmin);
+btnPriorityUpload?.addEventListener('click', openAdmin);
 
 menuToggle?.addEventListener('click', () => {
   document.body.classList.toggle('sidebar-open');
 });
 
-listenSession(async (nextSession) => {
-  session = nextSession;
-  await refreshCirculares();
-  showView();
+refreshCirculares().catch((error) => {
+  console.error(error);
+  cardsContainer.innerHTML = '<p class="empty">No se pudieron cargar las circulares.</p>';
 });
-
-
-createDefaultUsers().catch((error) => {
-  console.warn('Bootstrap de usuarios por defecto no completado.', error);
-});
+showView();
