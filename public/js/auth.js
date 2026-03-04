@@ -18,7 +18,7 @@ import { APP_MODE } from './app-config.js';
 let sessionCache = null;
 const isTemporaryLoginDisabled = APP_MODE.tempDisableLogin === true;
 const TEMP_ADMIN_SESSION = {
-  uid: 'temp-admin-session',
+  uid: '0eCLNvOvtbQg5ZwGRkaA8lB1NlA2',
   email: 'admin.temporal@circulares.local',
   role: 'admin',
   displayName: 'Admin temporal',
