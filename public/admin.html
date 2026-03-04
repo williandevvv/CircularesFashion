@@ -43,13 +43,9 @@
             <option value="tiendas_especificas">tiendas_especificas</option>
           </select>
 
-          <label>Imágenes de la circular (pueden ser varias)</label>
-          <input id="previewImages" type="file" accept="image/*" multiple />
-          <div id="previewThumbs" class="preview-thumbs"></div>
-
-          <label>PDF de la circular (opcional, para leer códigos)</label>
-          <input id="pdfFile" type="file" accept="application/pdf" />
-          <small id="pdfStatus" class="muted">Si subes un PDF, se intentarán extraer códigos automáticamente para el buscador.</small>
+          <label>PDF de la circular</label>
+          <input id="pdfFile" type="file" accept="application/pdf" required />
+          <small id="pdfStatus" class="muted">Debes subir un PDF para guardar la circular.</small>
 
           <label>Códigos detectados</label>
           <input id="codigos" name="codigos" placeholder="Se completa desde PDF o manualmente (separados por coma)" />

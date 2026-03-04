@@ -1,71 +1,66 @@
-import { getCircularById } from './db-local.js';
-import { currentSession, logout } from './auth.js';
+import { getCircularById } from './db-firebase.js';
+import { listenSession, logout } from './auth.js';
 
 const params = new URLSearchParams(window.location.search);
 const id = params.get('id');
 
 const metaEl = document.getElementById('meta');
-const imageViewer = document.getElementById('imageViewer');
-const noImages = document.getElementById('noImages');
+const pdfFrame = document.getElementById('pdfFrame');
+const openPdf = document.getElementById('openPdf');
+const noPdf = document.getElementById('noPdf');
 const btnLogout = document.getElementById('btnLogout');
 const mobileLogout = document.getElementById('mobileLogout');
 const userBadge = document.getElementById('userBadge');
 const menuToggle = document.querySelector('.mobile-menu-toggle');
 
-const session = currentSession();
-if (!session) {
-  window.location.replace('./index.html');
-}
-if (session) {
-  userBadge.textContent = `${session.email} (${session.role})`;
-}
-
-function renderImages(previewImages = []) {
-  imageViewer.innerHTML = '';
-
-  if (!previewImages.length) {
-    noImages.style.display = 'block';
-    return;
-  }
-
-  noImages.style.display = 'none';
-  previewImages.forEach((imageSrc, index) => {
-    const img = document.createElement('img');
-    img.src = imageSrc;
-    img.alt = `Página ${index + 1} de la circular`;
-    img.loading = 'lazy';
-    imageViewer.appendChild(img);
-  });
-}
-
-function initPage() {
-  const circular = getCircularById(id);
+async function initPage() {
+  const circular = await getCircularById(id);
   if (!circular) {
     metaEl.innerHTML = '<p>No se encontró la circular.</p>';
-    renderImages([]);
+    noPdf.style.display = 'block';
+    pdfFrame.style.display = 'none';
+    openPdf.style.display = 'none';
     return;
   }
 
   metaEl.innerHTML = `
-    <p><strong>Número:</strong> ${circular.numero}</p>
-    <p><strong>Departamento:</strong> ${circular.departamento}</p>
-    <p><strong>Fecha:</strong> ${circular.fecha}</p>
-    <p><strong>Aplica a:</strong> ${circular.aplicaA}</p>
+    <p><strong>Número:</strong> ${circular.numero || '-'}</p>
+    <p><strong>Departamento:</strong> ${circular.departamento || '-'}</p>
+    <p><strong>Fecha:</strong> ${circular.fecha || '-'}</p>
+    <p><strong>Aplica a:</strong> ${circular.aplicaA || '-'}</p>
   `;
 
-  renderImages(Array.isArray(circular.previewImages) ? circular.previewImages : []);
+  if (circular.pdfUrl) {
+    pdfFrame.src = circular.pdfUrl;
+    openPdf.href = circular.pdfUrl;
+    noPdf.style.display = 'none';
+  } else {
+    noPdf.style.display = 'block';
+    pdfFrame.style.display = 'none';
+    openPdf.style.display = 'none';
+  }
 }
 
-function handleLogout() {
-  logout();
+btnLogout?.addEventListener('click', async () => {
+  await logout();
   window.location.replace('./index.html');
-}
+});
 
-initPage();
-
-btnLogout?.addEventListener('click', handleLogout);
-mobileLogout?.addEventListener('click', handleLogout);
+mobileLogout?.addEventListener('click', async () => {
+  await logout();
+  window.location.replace('./index.html');
+});
 
 menuToggle?.addEventListener('click', () => {
   document.body.classList.toggle('sidebar-open');
+});
+
+listenSession(async (session) => {
+  if (!session) {
+    window.location.replace('./index.html');
+    return;
+  }
+
+  userBadge.textContent = `${session.email} (${session.role})`;
+  await initPage();
 });

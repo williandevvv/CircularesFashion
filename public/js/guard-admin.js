@@ -1,6 +1,8 @@
-import { currentSession } from './auth.js';
+import { listenSession } from './auth.js';
 
-const session = currentSession();
-if (!session || session.role !== 'admin') {
-  window.location.replace('./index.html');
-}
+listenSession((session) => {
+  const isAdmin = Boolean(session?.isActive) && session?.role === 'admin';
+  if (!isAdmin) {
+    window.location.replace('./index.html');
+  }
+});
