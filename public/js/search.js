@@ -1,5 +1,5 @@
 import { listCirculares } from './db-firebase.js';
-import { listenSession, login, logout } from './auth.js';
+import { createDefaultAdmin, listenSession, login, logout } from './auth.js';
 
 const loginView = document.getElementById('loginView');
 const appView = document.getElementById('appView');
@@ -129,4 +129,9 @@ listenSession(async (nextSession) => {
   session = nextSession;
   await refreshCirculares();
   showView();
+});
+
+
+createDefaultAdmin().catch((error) => {
+  console.warn('Bootstrap admin automático no completado.', error);
 });
