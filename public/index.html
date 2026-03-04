@@ -35,7 +35,16 @@
           </div>
         </div>
 
+        <p id="uploadStatus" class="hidden" role="status" aria-live="polite"></p>
         <section id="cardsContainer" class="cards"></section>
+
+        <section id="selectedCircularSection" class="card hidden">
+          <h2>Circular recién subida</h2>
+          <div id="selectedCircularMeta"></div>
+          <iframe id="selectedCircularFrame" style="width:100%;height:80vh;border:1px solid #e5e7eb;border-radius:12px;"></iframe>
+          <p id="selectedCircularNoPdf" class="muted hidden">Esta circular no tiene PDF asociado.</p>
+          <p><a id="selectedCircularOpenPdf" class="btn btn-secondary" target="_blank" rel="noopener">Abrir PDF</a></p>
+        </section>
       </section>
     </main>
   </div>
