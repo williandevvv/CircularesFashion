@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Detalle Circular — Circulares Fashion</title>
+  <link rel="stylesheet" href="./css/styles.css" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📄</text></svg>" />
+</head>
+<body>
+
+<!-- ══════════════════ NAVBAR ══════════════════ -->
+<nav class="navbar">
+  <div class="navbar-inner">
+    <div class="navbar-brand">
+      <div class="logo-icon">CF</div>
+      Circulares <span>Fashion</span>
+    </div>
+    <div class="navbar-actions">
+      <div class="user-pill">
+        <div class="user-avatar" id="user-avatar">?</div>
+        <div>
+          <div class="user-name" id="user-name">—</div>
+          <div class="user-role" id="user-role">—</div>
+        </div>
+      </div>
+      <button id="btn-logout" class="btn btn-ghost btn-sm">Salir</button>
+    </div>
+  </div>
+</nav>
+
+<!-- ══════════════════ CONTENT ══════════════════ -->
+<div class="detalle-page">
+
+  <!-- Back -->
+  <button class="back-btn" id="btn-back">← Volver al inicio</button>
+
+  <!-- Loading -->
+  <div id="loading" class="loading-state">
+    <div class="spinner"></div>
+    <span>Cargando circular…</span>
+  </div>
+
+  <!-- Circular content (hidden until loaded) -->
+  <div id="circular-content" class="hidden">
+
+    <!-- Info hero -->
+    <div class="detalle-hero">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:6px">
+        <div class="detalle-numero" id="det-numero">—</div>
+        <span style="background:var(--blue-pale);color:var(--blue);padding:4px 14px;border-radius:999px;font-size:0.78rem;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;border:1px solid var(--blue-muted)" id="det-dept-badge">—</span>
+      </div>
+      <div class="detalle-dept" id="det-dept">—</div>
+
+      <div class="detalle-divider"></div>
+
+      <div class="detalle-grid">
+        <div class="detalle-field">
+          <label>Aplica A</label>
+          <p id="det-aplica">—</p>
+        </div>
+        <div class="detalle-field">
+          <label>Fecha de Circular</label>
+          <p id="det-fecha">—</p>
+        </div>
+        <div class="detalle-field">
+          <label>Fecha de Publicación</label>
+          <p id="det-created">—</p>
+        </div>
+      </div>
+
+      <div class="detalle-actions">
+        <a id="btn-open-pdf" href="#" class="btn btn-primary hidden" target="_blank"
+          rel="noopener noreferrer">
+          📥 Descargar / Abrir PDF
+        </a>
+        <a href="./index.html" class="btn btn-ghost">🏠 Volver al inicio</a>
+      </div>
+    </div>
+
+    <!-- PDF Viewer -->
+    <div class="pdf-section" id="pdf-section">
+      <div class="pdf-section-header">
+        <h3>📄 Documento</h3>
+        <a id="btn-open-pdf2" href="#" class="btn btn-outline btn-sm"
+          target="_blank" rel="noopener noreferrer">
+          Abrir en nueva pestaña ↗
+        </a>
+      </div>
+      <div class="pdf-viewer-wrap">
+        <iframe id="pdf-iframe"
+          title="Visor de PDF"
+          loading="lazy"
+          allowfullscreen>
+        </iframe>
+      </div>
+    </div>
+
+  </div><!-- /circular-content -->
+</div>
+
+<div class="toast-container" id="toast-container"></div>
+
+<script type="module" src="./js/detalle.js"></script>
+</body>
+</html>

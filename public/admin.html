@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Panel Admin — Circulares Fashion</title>
+  <link rel="stylesheet" href="./css/styles.css" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚙️</text></svg>" />
+</head>
+<body>
+
+<!-- ══════════════════ NAVBAR ══════════════════ -->
+<nav class="navbar">
+  <div class="navbar-inner">
+    <div class="navbar-brand">
+      <div class="logo-icon" style="font-size:0.85rem">ADM</div>
+      Panel <span>Administrador</span>
+    </div>
+    <div class="navbar-actions">
+      <div class="user-pill">
+        <div class="user-avatar" id="admin-avatar">A</div>
+        <div>
+          <div class="user-name" id="admin-name">—</div>
+          <div class="user-role" id="admin-role">admin</div>
+        </div>
+      </div>
+      <a href="./index.html" class="btn btn-ghost btn-sm">🏠 Inicio</a>
+      <button id="btn-logout" class="btn btn-ghost btn-sm">Salir</button>
+    </div>
+  </div>
+</nav>
+
+<!-- ══════════════════ MAIN ══════════════════ -->
+<main class="dashboard">
+
+  <!-- Tabs -->
+  <div class="tabs">
+    <button class="tab-btn active" data-tab="tab-circulares">📋 Circulares</button>
+    <button class="tab-btn" data-tab="tab-usuarios">👥 Usuarios</button>
+  </div>
+
+  <!-- ─── TAB: CIRCULARES ─── -->
+  <div id="tab-circulares" class="tab-panel active">
+
+    <div class="section-header">
+      <div style="display:flex;align-items:center;gap:10px">
+        <span class="section-title">Gestión de Circulares</span>
+        <span class="section-count" id="circulares-count">0</span>
+      </div>
+      <button id="btn-nueva-circular" class="btn btn-primary">+ Nueva Circular</button>
+    </div>
+
+    <!-- Search & filter -->
+    <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap">
+      <input type="search" id="search-admin" class="form-control"
+        placeholder="Buscar por número, departamento…" style="flex:1;min-width:180px" />
+      <select id="filter-dept-admin" class="form-control" style="min-width:200px"></select>
+    </div>
+
+    <div class="table-wrap table-responsive-cards">
+      <table>
+        <thead>
+          <tr>
+            <th>Número</th>
+            <th>Departamento</th>
+            <th>Aplica A</th>
+            <th>Fecha</th>
+            <th>Creado</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody id="circulares-tbody">
+          <tr>
+            <td colspan="6" style="text-align:center;padding:48px">
+              <div class="spinner" style="margin:0 auto"></div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ─── TAB: USUARIOS ─── -->
+  <div id="tab-usuarios" class="tab-panel">
+
+    <div class="section-header">
+      <div style="display:flex;align-items:center;gap:10px">
+        <span class="section-title">Gestión de Usuarios</span>
+        <span class="section-count" id="users-count">0</span>
+      </div>
+      <button id="btn-nuevo-usuario" class="btn btn-primary">+ Nuevo Usuario</button>
+    </div>
+
+    <div class="alert alert-info mb-16" style="font-size:0.82rem">
+      ℹ️ Los cambios de rol y estado se aplican inmediatamente. Para restablecer contraseñas usa Firebase Console → Authentication.
+    </div>
+
+    <div class="table-wrap table-responsive-cards">
+      <table>
+        <thead>
+          <tr>
+            <th>Nombre</th>
+            <th>Email</th>
+            <th>Rol</th>
+            <th>Activo</th>
+            <th>Creado</th>
+          </tr>
+        </thead>
+        <tbody id="users-tbody">
+          <tr>
+            <td colspan="5" style="text-align:center;padding:48px">
+              <div class="spinner" style="margin:0 auto"></div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</main>
+
+<!-- ══════════════════ MODAL: CIRCULAR ══════════════════ -->
+<div id="modal-circular" class="modal-overlay hidden">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 class="modal-title" id="modal-circ-title">Nueva Circular</h3>
+      <button class="modal-close" id="modal-circ-close">✕</button>
+    </div>
+    <form id="form-circular" novalidate>
+      <div class="modal-body">
+        <div id="alert-circular" class="alert hidden"></div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label" for="ci-numero">Número *</label>
+            <input type="text" id="ci-numero" class="form-control"
+              placeholder="ej. 005-26" required />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="ci-fecha">Fecha *</label>
+            <input type="date" id="ci-fecha" class="form-control" required />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="ci-departamento">Departamento *</label>
+          <select id="ci-departamento" class="form-control" required></select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="ci-aplicaA">Aplica A *</label>
+          <input type="text" id="ci-aplicaA" class="form-control"
+            placeholder="ej. Todo el personal de ventas" required />
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Archivo PDF *</label>
+          <p id="pdf-replace-note" class="text-muted hidden"
+            style="font-size:0.78rem;margin-bottom:6px">
+            Deja vacío para mantener el PDF actual
+          </p>
+          <div class="file-input-wrapper">
+            <input type="file" id="pdf-file" accept="application/pdf" />
+            <div class="file-input-display">
+              <span class="file-icon">📄</span>
+              <span id="file-label" class="file-text">Seleccionar PDF (.pdf)</span>
+            </div>
+          </div>
+          <div class="upload-progress" id="upload-progress">
+            <div class="progress-bar-wrap">
+              <div class="progress-bar" id="progress-bar"></div>
+            </div>
+            <p class="progress-text" id="progress-text"></p>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-ghost" id="modal-circ-cancel">Cancelar</button>
+        <button type="submit" class="btn btn-primary" id="btn-save-circular">Guardar Circular</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ══════════════════ MODAL: USUARIO ══════════════════ -->
+<div id="modal-user" class="modal-overlay hidden">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 class="modal-title">Nuevo Usuario</h3>
+      <button class="modal-close" id="modal-user-close">✕</button>
+    </div>
+    <form id="form-user" novalidate>
+      <div class="modal-body">
+        <div id="alert-user" class="alert hidden"></div>
+
+        <div class="alert alert-info" style="font-size:0.82rem;margin-bottom:18px">
+          🔒 La sesión del administrador <strong>no se cerrará</strong> al crear el usuario.
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="u-displayname">Nombre completo *</label>
+          <input type="text" id="u-displayname" class="form-control"
+            placeholder="Nombre Apellido" required />
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label" for="u-email">Correo *</label>
+            <input type="email" id="u-email" class="form-control"
+              placeholder="correo@empresa.com" required />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="u-password">Contraseña *</label>
+            <input type="password" id="u-password" class="form-control"
+              placeholder="Mínimo 6 caracteres" minlength="6" required />
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label" for="u-role">Rol *</label>
+            <select id="u-role" class="form-control" required>
+              <option value="usuario">usuario</option>
+              <option value="auditor">auditor</option>
+              <option value="admin">admin</option>
+            </select>
+          </div>
+          <div class="form-group" style="display:flex;align-items:center;gap:12px;padding-top:26px">
+            <label class="toggle">
+              <input type="checkbox" id="u-isActive" checked />
+              <span class="toggle-slider"></span>
+            </label>
+            <span style="font-size:0.875rem;font-weight:600;color:var(--slate-600)">Usuario activo</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-ghost" id="modal-user-cancel">Cancelar</button>
+        <button type="submit" class="btn btn-primary" id="btn-save-user">Crear Usuario</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ══════════════════ CONFIRM ══════════════════ -->
+<div id="confirm-overlay" class="confirm-dialog hidden">
+  <div class="confirm-box">
+    <div class="confirm-icon">🗑️</div>
+    <h3 id="confirm-title">¿Eliminar?</h3>
+    <p id="confirm-msg">Esta acción no se puede deshacer.</p>
+    <div class="confirm-actions">
+      <button id="confirm-no"  class="btn btn-ghost">Cancelar</button>
+      <button id="confirm-yes" class="btn btn-danger">Sí, eliminar</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast-container" id="toast-container"></div>
+
+<script type="module" src="./js/admin.js"></script>
+</body>
+</html>
