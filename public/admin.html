@@ -57,6 +57,32 @@
         </form>
       </section>
 
+
+      <section class="panel">
+        <h2>Gestión de Usuarios</h2>
+        <form id="user-form" class="grid-form">
+          <label>Nombre</label>
+          <input name="nombre" required placeholder="Nombre completo" />
+
+          <label>Correo</label>
+          <input name="correo" type="email" required placeholder="usuario@dominio.com" />
+
+          <label>Contraseña</label>
+          <input name="password" type="password" required minlength="6" placeholder="Mínimo 6 caracteres" />
+
+          <label>Rol</label>
+          <select name="role" required>
+            <option value="admin">admin</option>
+            <option value="auditor">auditor</option>
+            <option value="usuario" selected>usuario</option>
+          </select>
+
+          <div class="actions">
+            <button id="createUserButton" class="btn" type="submit">Crear usuario</button>
+          </div>
+        </form>
+        <p id="userMessage" class="muted"></p>
+      </section>
       <section class="card">
         <h2>Circulares guardadas</h2>
         <p id="adminMessage" class="muted"></p>

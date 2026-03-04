@@ -8,7 +8,7 @@ import {
   updateCircular
 } from './db-firebase.js';
 import { deletePdfByPath, uploadPdf } from './storage-adapter.js';
-import { currentSession, listenSession, logout } from './auth.js';
+import { createUserFromAdminPanel, currentSession, listenSession, logout } from './auth.js';
 
 const form = document.getElementById('circular-form');
 const formTitle = document.getElementById('formTitle');
@@ -22,6 +22,8 @@ const adminMessage = document.getElementById('adminMessage');
 const userBadge = document.getElementById('userBadge');
 const btnLogout = document.getElementById('btnLogout');
 const menuToggle = document.querySelector('.mobile-menu-toggle');
+const userForm = document.getElementById('user-form');
+const userMessage = document.getElementById('userMessage');
 
 let editingId = null;
 let cachedCirculares = [];
@@ -40,6 +42,11 @@ function parseCodesFromText(value = '') {
 
 function showMessage(message = '') {
   adminMessage.textContent = message;
+}
+
+
+function showUserMessage(message = '') {
+  if (userMessage) userMessage.textContent = message;
 }
 
 function updateEditUI() {
@@ -305,6 +312,31 @@ circularesList?.addEventListener('click', async (event) => {
 });
 
 cancelEditButton?.addEventListener('click', cancelEdit);
+
+userForm?.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  showUserMessage('');
+
+  const data = new FormData(userForm);
+  const nombre = String(data.get('nombre') || '').trim();
+  const correo = String(data.get('correo') || '').trim();
+  const password = String(data.get('password') || '').trim();
+  const role = String(data.get('role') || '').trim();
+
+  if (!nombre || !correo || !password || !role) {
+    showUserMessage('Completa todos los campos para crear el usuario.');
+    return;
+  }
+
+  try {
+    await createUserFromAdminPanel({ nombre, correo, password, role });
+    showUserMessage(`Usuario ${correo} creado correctamente con rol ${role}.`);
+    userForm.reset();
+  } catch (error) {
+    console.error(error);
+    showUserMessage(error?.message || 'No se pudo crear el usuario.');
+  }
+});
 
 btnLogout?.addEventListener('click', async () => {
   await logout();
