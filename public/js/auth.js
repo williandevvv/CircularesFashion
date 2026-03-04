@@ -31,12 +31,20 @@ const PROFILE_LOAD_ERROR_MESSAGE =
 const PROFILE_MISSING_ERROR_MESSAGE =
   'Tu usuario no tiene perfil en Firestore (users/{uid}). Pide al admin que te cree el rol.';
 
-const DEFAULT_ADMIN = {
-  email: 'admin@circulares.fs',
-  password: 'Admin123!',
-  displayname: 'Administrador',
-  role: 'admin'
-};
+const DEFAULT_USERS = [
+  {
+    email: 'admin@circulares.fs',
+    password: 'Admin123!',
+    displayname: 'Administrador',
+    role: 'admin'
+  },
+  {
+    email: 'auditor@circulares.fs',
+    password: 'Auditor123!',
+    displayname: 'Auditor',
+    role: 'auditor'
+  }
+];
 
 const ROLES = new Set(['admin', 'auditor', 'usuario']);
 
@@ -112,46 +120,52 @@ async function buildSession(user) {
   };
 }
 
-export async function createDefaultAdmin() {
+export async function createDefaultUsers() {
   if (isTemporaryLoginDisabled) {
     return { ok: true, skipped: true, reason: 'temp-login-disabled' };
   }
 
-  const bootstrapKey = 'circulares.default-admin.bootstrap.done';
+  const bootstrapKey = 'circulares.default-users.bootstrap.done';
   if (window.localStorage.getItem(bootstrapKey) === '1') {
     return { ok: true, skipped: true };
   }
 
-  const { secondaryApp, secondaryAuth } = createSecondaryAuth();
+  const createdUsers = [];
 
   try {
-    const credential = await createUserWithEmailAndPassword(
-      secondaryAuth,
-      DEFAULT_ADMIN.email,
-      DEFAULT_ADMIN.password
-    );
+    for (const defaultUser of DEFAULT_USERS) {
+      const { secondaryApp, secondaryAuth } = createSecondaryAuth();
 
-    await setDoc(doc(db, 'users', credential.user.uid), {
-      email: DEFAULT_ADMIN.email,
-      displayname: DEFAULT_ADMIN.displayname,
-      role: DEFAULT_ADMIN.role,
-      isActive: true,
-      createdAt: serverTimestamp()
-    }, { merge: true });
+      try {
+        const credential = await createUserWithEmailAndPassword(
+          secondaryAuth,
+          defaultUser.email,
+          defaultUser.password
+        );
 
-    window.localStorage.setItem(bootstrapKey, '1');
-    await signOut(secondaryAuth);
-    await deleteApp(secondaryApp);
-    return { ok: true, created: true };
-  } catch (error) {
-    if (error?.code === 'auth/email-already-in-use') {
-      window.localStorage.setItem(bootstrapKey, '1');
-      await deleteApp(secondaryApp);
-      return { ok: true, created: false };
+        await setDoc(doc(db, 'users', credential.user.uid), {
+          email: defaultUser.email,
+          displayname: defaultUser.displayname,
+          role: defaultUser.role,
+          isActive: true,
+          createdAt: serverTimestamp()
+        }, { merge: true });
+
+        createdUsers.push(defaultUser.email);
+      } catch (error) {
+        if (error?.code !== 'auth/email-already-in-use') {
+          throw error;
+        }
+      } finally {
+        await signOut(secondaryAuth).catch(() => {});
+        await deleteApp(secondaryApp);
+      }
     }
 
-    console.warn('No se pudo ejecutar bootstrap de admin por defecto.', error);
-    await deleteApp(secondaryApp);
+    window.localStorage.setItem(bootstrapKey, '1');
+    return { ok: true, created: createdUsers };
+  } catch (error) {
+    console.warn('No se pudo ejecutar bootstrap de usuarios por defecto.', error);
     return { ok: false, error };
   }
 }
