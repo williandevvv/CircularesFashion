@@ -47,8 +47,11 @@ function parseCodesFromText(value = '') {
     .map((code) => code.trim()));
 }
 
-function showMessage(message = '') {
+function showMessage(message = '', type = 'info') {
   adminMessage.textContent = message;
+  adminMessage.classList.remove('status-success', 'status-error');
+  if (type === 'success') adminMessage.classList.add('status-success');
+  if (type === 'error') adminMessage.classList.add('status-error');
 }
 
 function updateEditUI() {
@@ -238,7 +241,7 @@ form?.addEventListener('submit', async (event) => {
         storagePath: nextStoragePath
       });
 
-      showMessage('Cambios guardados.');
+      showMessage('Cambios guardados correctamente.', 'success');
       cancelEdit();
       await refreshCirculares();
       return;
@@ -263,12 +266,14 @@ form?.addEventListener('submit', async (event) => {
       createdBy: 'admin-clave'
     }, circularId);
 
-    showMessage('Circular guardada.');
+    showMessage('Circular subida correctamente.', 'success');
     clearFormState();
     await refreshCirculares();
+
+    window.location.href = `./index.html?upload=success&id=${encodeURIComponent(circularId)}`;
   } catch (error) {
     console.error(error);
-    alert('No se pudo guardar la circular.');
+    showMessage('No se pudo subir la circular. Verifica el PDF e inténtalo de nuevo.', 'error');
   }
 });
 
@@ -302,7 +307,7 @@ circularesList?.addEventListener('click', async (event) => {
     }
     await deleteCircular(id);
 
-    showMessage('Circular eliminada.');
+    showMessage('Circular eliminada.', 'success');
     if (editingId === id) {
       cancelEdit();
     }
@@ -327,5 +332,5 @@ menuToggle?.addEventListener('click', () => {
 updateEditUI();
 refreshCirculares().catch((error) => {
   console.error(error);
-  showMessage('No se pudieron cargar las circulares.');
+  showMessage('No se pudieron cargar las circulares.', 'error');
 });

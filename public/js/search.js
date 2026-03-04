@@ -1,6 +1,7 @@
 import { listCirculares } from './db-firebase.js';
 import { clearAdminAccess, requestAdminAccess } from './admin-access.js';
 
+const params = new URLSearchParams(window.location.search);
 const appView = document.getElementById('appView');
 const btnLogout = document.getElementById('btnLogout');
 const btnAdmin = document.getElementById('btnAdmin');
@@ -8,10 +9,16 @@ const userBadge = document.getElementById('userBadge');
 const mobileLogout = document.getElementById('mobileLogout');
 const btnPriorityUpload = document.getElementById('btnPriorityUpload');
 const menuToggle = document.querySelector('.mobile-menu-toggle');
+const uploadStatus = document.getElementById('uploadStatus');
 
 const searchInput = document.getElementById('searchInput');
 const departmentFilter = document.getElementById('departmentFilter');
 const cardsContainer = document.getElementById('cardsContainer');
+const selectedCircularSection = document.getElementById('selectedCircularSection');
+const selectedCircularMeta = document.getElementById('selectedCircularMeta');
+const selectedCircularFrame = document.getElementById('selectedCircularFrame');
+const selectedCircularOpenPdf = document.getElementById('selectedCircularOpenPdf');
+const selectedCircularNoPdf = document.getElementById('selectedCircularNoPdf');
 
 let circulares = [];
 
@@ -21,6 +28,27 @@ function showView() {
   userBadge.textContent = 'Consulta pública de circulares';
   setupFilters();
   renderResults();
+}
+
+function showUploadStatus() {
+  const uploadState = params.get('upload');
+  if (!uploadStatus || !uploadState) return;
+
+  uploadStatus.classList.remove('hidden', 'status-success', 'status-error');
+
+  if (uploadState === 'success') {
+    uploadStatus.textContent = 'La circular se subió correctamente.';
+    uploadStatus.classList.add('status-success');
+    return;
+  }
+
+  if (uploadState === 'error') {
+    uploadStatus.textContent = 'No se pudo subir la circular.';
+    uploadStatus.classList.add('status-error');
+    return;
+  }
+
+  uploadStatus.classList.add('hidden');
 }
 
 function setupFilters() {
@@ -46,6 +74,41 @@ function matchCircular(circular, term, department) {
   const byDepartment = String(circular.departamento || '').toUpperCase().includes(normalized);
 
   return byCode || byNumber || byDepartment;
+}
+
+function renderSelectedCircular() {
+  const selectedId = params.get('id');
+  if (!selectedId || !selectedCircularSection) return;
+
+  const circular = circulares.find((item) => item.id === selectedId);
+  if (!circular) {
+    selectedCircularSection.classList.remove('hidden');
+    selectedCircularMeta.innerHTML = '<p class="muted">No se encontró la circular seleccionada.</p>';
+    selectedCircularFrame.classList.add('hidden');
+    selectedCircularOpenPdf.classList.add('hidden');
+    selectedCircularNoPdf.classList.remove('hidden');
+    return;
+  }
+
+  selectedCircularSection.classList.remove('hidden');
+  selectedCircularMeta.innerHTML = `
+    <p><strong>Número:</strong> ${circular.numero || '-'}</p>
+    <p><strong>Departamento:</strong> ${circular.departamento || '-'}</p>
+    <p><strong>Fecha:</strong> ${circular.fecha || '-'}</p>
+    <p><strong>Aplica a:</strong> ${circular.aplicaA || '-'}</p>
+  `;
+
+  if (circular.pdfUrl) {
+    selectedCircularFrame.src = circular.pdfUrl;
+    selectedCircularFrame.classList.remove('hidden');
+    selectedCircularOpenPdf.href = circular.pdfUrl;
+    selectedCircularOpenPdf.classList.remove('hidden');
+    selectedCircularNoPdf.classList.add('hidden');
+  } else {
+    selectedCircularFrame.classList.add('hidden');
+    selectedCircularOpenPdf.classList.add('hidden');
+    selectedCircularNoPdf.classList.remove('hidden');
+  }
 }
 
 function renderResults() {
@@ -78,6 +141,7 @@ async function refreshCirculares() {
   circulares = await listCirculares();
   setupFilters();
   renderResults();
+  renderSelectedCircular();
 }
 
 function handleExitAdminMode() {
@@ -108,4 +172,5 @@ refreshCirculares().catch((error) => {
   console.error(error);
   cardsContainer.innerHTML = '<p class="empty">No se pudieron cargar las circulares.</p>';
 });
+showUploadStatus();
 showView();
