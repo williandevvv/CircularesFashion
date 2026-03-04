@@ -1,4 +1,5 @@
 import { listCirculares } from './db-firebase.js';
+import { listCircularesFromStorage } from './storage-adapter.js';
 import { clearAdminAccess, requestAdminAccess } from './admin-access.js';
 
 const params = new URLSearchParams(window.location.search);
@@ -137,8 +138,35 @@ function renderResults() {
     .join('');
 }
 
+function mergeCirculares(primary = [], fallback = []) {
+  const byId = new Map();
+
+  primary.forEach((item) => {
+    if (!item?.id) return;
+    byId.set(item.id, item);
+  });
+
+  fallback.forEach((item) => {
+    if (!item?.id || byId.has(item.id)) return;
+    byId.set(item.id, item);
+  });
+
+  return Array.from(byId.values());
+}
+
 async function refreshCirculares() {
-  circulares = await listCirculares();
+  const [firestoreCirculares, storageCirculares] = await Promise.all([
+    listCirculares().catch((error) => {
+      console.warn('No se pudieron cargar las circulares desde Firestore.', error);
+      return [];
+    }),
+    listCircularesFromStorage().catch((error) => {
+      console.warn('No se pudieron listar PDFs desde Storage.', error);
+      return [];
+    })
+  ]);
+
+  circulares = mergeCirculares(firestoreCirculares, storageCirculares);
   setupFilters();
   renderResults();
   renderSelectedCircular();

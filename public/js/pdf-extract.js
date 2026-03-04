@@ -10,10 +10,7 @@ let pdfLibPromise = null;
 
 async function loadPdfJs() {
   if (!pdfLibPromise) {
-    pdfLibPromise = import('https://cdn.jsdelivr.net/npm/pdfjs-dist@4.6.82/build/pdf.min.mjs').then((pdfjsLib) => {
-      pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.6.82/build/pdf.worker.min.mjs';
-      return pdfjsLib;
-    });
+    pdfLibPromise = import('https://cdn.jsdelivr.net/npm/pdfjs-dist@4.6.82/build/pdf.min.mjs');
   }
   return pdfLibPromise;
 }
@@ -23,7 +20,7 @@ export async function extractCodesFromPdf(file) {
 
   const pdfjsLib = await loadPdfJs();
   const arrayBuffer = await file.arrayBuffer();
-  const doc = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+  const doc = await pdfjsLib.getDocument({ data: arrayBuffer, disableWorker: true }).promise;
 
   const found = new Set();
 
