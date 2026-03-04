@@ -1,5 +1,6 @@
 import { listCirculares } from './db-firebase.js';
 import { createDefaultAdmin, listenSession, login, logout } from './auth.js';
+import { APP_MODE } from './app-config.js';
 
 const loginView = document.getElementById('loginView');
 const appView = document.getElementById('appView');
@@ -9,6 +10,7 @@ const btnLogout = document.getElementById('btnLogout');
 const btnAdmin = document.getElementById('btnAdmin');
 const userBadge = document.getElementById('userBadge');
 const mobileLogout = document.getElementById('mobileLogout');
+const btnPriorityUpload = document.getElementById('btnPriorityUpload');
 const menuToggle = document.querySelector('.mobile-menu-toggle');
 
 const searchInput = document.getElementById('searchInput');
@@ -19,6 +21,18 @@ let session = null;
 let circulares = [];
 
 function showView() {
+  if (APP_MODE.tempDisableLogin === true) {
+    loginView.classList.add('hidden');
+    appView.classList.remove('hidden');
+    btnLogout?.classList.add('hidden');
+    mobileLogout?.classList.add('hidden');
+    btnAdmin?.classList.remove('hidden');
+    userBadge.textContent = 'Acceso temporal sin login (modo admin)';
+    setupFilters();
+    renderResults();
+    return;
+  }
+
   const isLogged = Boolean(session);
   loginView.classList.toggle('hidden', isLogged);
   appView.classList.toggle('hidden', !isLogged);
@@ -118,6 +132,10 @@ btnLogout?.addEventListener('click', handleLogout);
 mobileLogout?.addEventListener('click', handleLogout);
 
 btnAdmin?.addEventListener('click', () => {
+  window.location.href = './admin.html';
+});
+
+btnPriorityUpload?.addEventListener('click', () => {
   window.location.href = './admin.html';
 });
 
