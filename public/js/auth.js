@@ -1,24 +1,24 @@
-import { APP_MODE } from './app-config.js';
-import { initLocalAuth, loginLocal, getSession, logoutLocal } from './local-auth.js';
+import { APP_MODE } from "./app-config.js";
+import { auth } from "./firebase-config.js";
+import {
+  signInWithEmailAndPassword,
+  signOut,
+  onAuthStateChanged
+} from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
 
-if (APP_MODE.auth === 'local') {
-  initLocalAuth();
+export function listenAuth(cb) {
+  if (APP_MODE.auth !== "firebase") throw new Error("auth no está en firebase");
+  return onAuthStateChanged(auth, cb);
 }
 
-export function login(email, password) {
-  if (APP_MODE.auth === 'local') {
-    return loginLocal(email, password);
-  }
-  return { ok: false, message: 'Modo auth no implementado todavía.' };
+export async function doLogin(email, password) {
+  const cred = await signInWithEmailAndPassword(auth, email, password);
+  return cred.user;
 }
 
-export function currentSession() {
-  if (APP_MODE.auth === 'local') {
-    return getSession();
-  }
-  return null;
+export async function doLogout() {
+  await signOut(auth);
 }
-
 export function logout() {
   if (APP_MODE.auth === 'local') {
     logoutLocal();
