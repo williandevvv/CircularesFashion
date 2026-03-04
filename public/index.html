@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Circulares | Inicio</title>
+  <link rel="stylesheet" href="./css/styles.css" />
+</head>
+<body>
+  <div class="layout">
+    <header class="mobile-header">
+      <button class="btn btn-secondary mobile-menu-toggle" type="button" aria-label="Abrir menú">☰</button>
+      <h1>Circulares</h1>
+      <button id="mobileLogout" class="btn btn-ghost">Salir</button>
+    </header>
+
+    <aside class="sidebar">
+      <h1>Circulares</h1>
+      <p class="muted">Panel interno</p>
+      <button id="btnAdmin" class="btn hidden">Ir a Admin</button>
+      <button id="btnLogout" class="btn btn-ghost">Cerrar sesión</button>
+      <small id="userBadge" class="muted"></small>
+    </aside>
+
+    <main class="main">
+      <section id="loginView" class="panel auth-panel">
+        <h2>Acceso</h2>
+        <form id="loginForm">
+          <label>Email</label>
+          <input name="email" type="email" required />
+          <label>Contraseña</label>
+          <input name="password" type="password" required />
+          <button class="btn" type="submit">Entrar</button>
+          <p id="loginError" class="error"></p>
+        </form>
+      </section>
+
+      <section id="appView" class="hidden">
+        <div class="panel search-panel">
+          <h2>Buscador de circulares</h2>
+          <div class="filters">
+            <input id="searchInput" type="text" placeholder="Buscar por código (COJIN130), número (005-26) o departamento" />
+            <select id="departmentFilter"></select>
+          </div>
+        </div>
+
+        <section id="cardsContainer" class="cards"></section>
+      </section>
+    </main>
+  </div>
+
+  <script type="module" src="./js/search.js"></script>
+</body>
+</html>
