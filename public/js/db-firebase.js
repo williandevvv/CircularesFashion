@@ -14,9 +14,19 @@ import {
 
 const CIRCULARES_COLLECTION = 'circulares';
 
+function normalizeCircularData(data = {}) {
+  return {
+    ...data,
+    numero: data.numero ?? data.Numero ?? '',
+    departamento: data.departamento ?? data.Departamento ?? '',
+    fecha: data.fecha ?? data.Fecha ?? '',
+    pdfUrl: data.pdfUrl ?? data.pdfURL ?? data.linkPdf ?? ''
+  };
+}
+
 function toCircular(snapshot) {
   if (!snapshot.exists()) return null;
-  return { id: snapshot.id, ...snapshot.data() };
+  return { id: snapshot.id, ...normalizeCircularData(snapshot.data()) };
 }
 
 export function generateCircularId() {
@@ -48,7 +58,7 @@ export async function deleteCircular(id) {
 export async function listCirculares() {
   const q = query(collection(db, CIRCULARES_COLLECTION), orderBy('createdAt', 'desc'));
   const snapshot = await getDocs(q);
-  return snapshot.docs.map((item) => ({ id: item.id, ...item.data() }));
+  return snapshot.docs.map((item) => ({ id: item.id, ...normalizeCircularData(item.data()) }));
 }
 
 export async function getCircularById(id) {
