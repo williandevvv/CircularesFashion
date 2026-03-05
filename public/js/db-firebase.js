@@ -5,6 +5,8 @@ import {
   doc,
   getDoc,
   getDocs,
+  limit,
+  onSnapshot,
   orderBy,
   query,
   serverTimestamp,
@@ -55,10 +57,31 @@ export async function deleteCircular(id) {
   await deleteDoc(doc(db, CIRCULARES_COLLECTION, id));
 }
 
+function buildCircularesQuery(limitSize = 50) {
+  return query(
+    collection(db, CIRCULARES_COLLECTION),
+    orderBy('createdAt', 'desc'),
+    limit(limitSize)
+  );
+}
+
 export async function listCirculares() {
-  const q = query(collection(db, CIRCULARES_COLLECTION), orderBy('createdAt', 'desc'));
-  const snapshot = await getDocs(q);
+  const snapshot = await getDocs(buildCircularesQuery());
   return snapshot.docs.map((item) => ({ id: item.id, ...normalizeCircularData(item.data()) }));
+}
+
+export function listenCirculares(onNext, onError) {
+  return onSnapshot(
+    buildCircularesQuery(),
+    (snapshot) => {
+      const circulares = snapshot.docs.map((item) => ({
+        id: item.id,
+        ...normalizeCircularData(item.data())
+      }));
+      onNext(circulares);
+    },
+    onError
+  );
 }
 
 export async function getCircularById(id) {

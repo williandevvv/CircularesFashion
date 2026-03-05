@@ -1,6 +1,6 @@
 import { getApp, getApps, initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
 import { getAuth } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
-import { initializeFirestore } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
+import { enableIndexedDbPersistence, getFirestore } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 import { getStorage } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-storage.js";
 
 export const firebaseConfig = {
@@ -16,10 +16,11 @@ const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
 
 export const auth = getAuth(app);
 
-// Firestore con long polling para mejorar estabilidad en GitHub Pages sin duplicar initializeApp().
-export const db = initializeFirestore(app, {
-  experimentalForceLongPolling: true,
-  useFetchStreams: false
+// Firestore en este proyecto vive en la base no-default "circularesfs".
+export const db = getFirestore(app, "circularesfs");
+
+enableIndexedDbPersistence(db).catch(() => {
+  // Puede fallar en multi-pestaña o navegadores sin soporte; no bloqueamos la app.
 });
 
 export const storage = getStorage(app);
