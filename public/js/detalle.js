@@ -1,5 +1,5 @@
-import { db } from './firebase-config.js';
-import { listenSession, logout } from './auth.js';
+import { auth, db } from './firebase-config.js';
+import { onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js';
 import { doc, getDoc } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js';
 
 const id = new URLSearchParams(location.search).get('id');
@@ -65,7 +65,7 @@ async function initPage() {
     const snapshot = await getDoc(doc(db, 'circulares', id));
 
     if (!snapshot.exists()) {
-      renderError('Circular no encontrada');
+      renderError('Circular no encontrada.');
       return;
     }
 
@@ -73,8 +73,16 @@ async function initPage() {
     renderCircular(circular);
   } catch (error) {
     console.error(`Error al obtener la circular ${id} desde Firestore.`, error);
-    renderError('Circular no encontrada');
+    if (error?.code === 'permission-denied') {
+      renderError('No tienes permisos para ver esta circular. Inicia sesión nuevamente.');
+      return;
+    }
+    renderError('No se pudo cargar el detalle de la circular.');
   }
+}
+
+async function logout() {
+  await signOut(auth);
 }
 
 btnLogout?.addEventListener('click', async () => {
@@ -91,12 +99,14 @@ menuToggle?.addEventListener('click', () => {
   document.body.classList.toggle('sidebar-open');
 });
 
-listenSession(async (session) => {
-  if (!session) {
+metaEl.innerHTML = '<p>Cargando detalle...</p>';
+
+onAuthStateChanged(auth, async (user) => {
+  if (!user) {
     window.location.replace('./index.html');
     return;
   }
 
-  userBadge.textContent = `${session.email} (${session.role})`;
+  userBadge.textContent = user.email || 'Usuario autenticado';
   await initPage();
 });
