@@ -25,6 +25,7 @@ const selectedCircularNoPdf = document.getElementById('selectedCircularNoPdf');
 
 let circulares = [];
 let circularesLoadedForSession = false;
+let authResolvedForSession = false;
 
 function showView() {
   appView?.classList.remove('hidden');
@@ -229,6 +230,9 @@ showUploadStatus();
 showView();
 
 onAuthStateChanged(auth, (user) => {
+  if (authResolvedForSession) return;
+  authResolvedForSession = true;
+
   if (!user) {
     setCardsStatus('No hay sesión activa para cargar circulares.');
     return;
