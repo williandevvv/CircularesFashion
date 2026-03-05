@@ -24,6 +24,7 @@ const selectedCircularOpenPdf = document.getElementById('selectedCircularOpenPdf
 const selectedCircularNoPdf = document.getElementById('selectedCircularNoPdf');
 
 let circulares = [];
+let circularesLoadedForSession = false;
 
 function showView() {
   appView?.classList.remove('hidden');
@@ -169,8 +170,8 @@ function mergeCirculares(primary = [], fallback = []) {
   return Array.from(byId.values());
 }
 
-async function refreshCirculares() {
-  setCardsStatus('Cargando...');
+async function cargarCirculares() {
+  setCardsStatus('Cargando circulares...');
 
   const [firestoreCirculares, storageCirculares] = await Promise.all([
     listCirculares().catch((error) => {
@@ -187,6 +188,17 @@ async function refreshCirculares() {
   setupFilters();
   renderResults();
   renderSelectedCircular();
+}
+
+function loadCircularesOnce() {
+  if (circularesLoadedForSession) return;
+  circularesLoadedForSession = true;
+
+  cargarCirculares().catch((error) => {
+    console.error('Error inesperado al inicializar la carga de circulares.', error);
+    setCardsStatus('No se pudieron cargar las circulares.');
+    circularesLoadedForSession = false;
+  });
 }
 
 function handleExitAdminMode() {
@@ -219,14 +231,10 @@ showView();
 onAuthStateChanged(auth, (user) => {
   if (!user) {
     setCardsStatus('No hay sesión activa para cargar circulares.');
-    console.error('No se cargaron circulares porque auth.currentUser no está disponible.');
     return;
   }
 
-  refreshCirculares().catch((error) => {
-    console.error('Error inesperado al inicializar la carga de circulares.', error);
-    setCardsStatus('No se pudieron cargar las circulares.');
-  });
+  loadCircularesOnce();
 }, (error) => {
   console.error('Error al esperar el estado de autenticación.', error);
   setCardsStatus('No se pudo verificar la sesión.');
