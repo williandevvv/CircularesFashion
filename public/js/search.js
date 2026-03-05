@@ -132,6 +132,7 @@ function renderResults() {
 
   cardsContainer.innerHTML = results
     .map((c) => {
+      console.log('Render circular doc.id:', c.id);
       const detailHref = `./detalle.html?id=${encodeURIComponent(c.id)}`;
       const pdfAction = c.pdfUrl
         ? `<a class="btn btn-secondary" href="${c.pdfUrl}" target="_blank" rel="noopener">Ver PDF</a>`
@@ -188,20 +189,6 @@ async function refreshCirculares() {
   renderSelectedCircular();
 }
 
-function waitForAuthenticatedUser() {
-  return new Promise((resolve) => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      if (user) {
-        unsubscribe();
-        resolve(user);
-      }
-    }, (error) => {
-      console.error('Error al verificar sesión de Firebase Auth.', error);
-      resolve(null);
-    });
-  });
-}
-
 function handleExitAdminMode() {
   clearAdminAccess();
   window.alert('Clave de admin eliminada para esta sesión.');
@@ -229,17 +216,18 @@ menuToggle?.addEventListener('click', () => {
 showUploadStatus();
 showView();
 
-waitForAuthenticatedUser()
-  .then((user) => {
-    if (!user) {
-      setCardsStatus('No hay sesión activa para cargar circulares.');
-      console.error('No se cargaron circulares porque auth.currentUser no está disponible.');
-      return;
-    }
+onAuthStateChanged(auth, (user) => {
+  if (!user) {
+    setCardsStatus('No hay sesión activa para cargar circulares.');
+    console.error('No se cargaron circulares porque auth.currentUser no está disponible.');
+    return;
+  }
 
-    return refreshCirculares();
-  })
-  .catch((error) => {
+  refreshCirculares().catch((error) => {
     console.error('Error inesperado al inicializar la carga de circulares.', error);
     setCardsStatus('No se pudieron cargar las circulares.');
   });
+}, (error) => {
+  console.error('Error al esperar el estado de autenticación.', error);
+  setCardsStatus('No se pudo verificar la sesión.');
+});
