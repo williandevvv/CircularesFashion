@@ -1,3 +1,5 @@
+import { auth } from './firebase-config.js';
+import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js';
 import { listCirculares } from './db-firebase.js';
 import { listCircularesFromStorage } from './storage-adapter.js';
 import { clearAdminAccess, requestAdminAccess } from './admin-access.js';
@@ -29,6 +31,11 @@ function showView() {
   userBadge.textContent = 'Consulta pública de circulares';
   setupFilters();
   renderResults();
+}
+
+function setCardsStatus(message) {
+  if (!cardsContainer) return;
+  cardsContainer.innerHTML = `<p class="empty">${message}</p>`;
 }
 
 function showUploadStatus() {
@@ -119,22 +126,29 @@ function renderResults() {
   const results = circulares.filter((c) => matchCircular(c, term, dep));
 
   if (!results.length) {
-    cardsContainer.innerHTML = '<p class="empty">No hay resultados con ese filtro.</p>';
+    setCardsStatus('No hay resultados con ese filtro.');
     return;
   }
 
   cardsContainer.innerHTML = results
-    .map((c) => `
+    .map((c) => {
+      const detailHref = `./detalle.html?id=${encodeURIComponent(c.id)}`;
+      const pdfAction = c.pdfUrl
+        ? `<a class="btn btn-secondary" href="${c.pdfUrl}" target="_blank" rel="noopener">Ver PDF</a>`
+        : '<button class="btn btn-secondary" type="button" disabled title="Sin PDF asociado">Sin PDF</button>';
+
+      return `
       <article class="card">
         <h3>${c.numero || '-'}</h3>
         <p><strong>Departamento:</strong> ${c.departamento || '-'}</p>
         <p><strong>Fecha:</strong> ${c.fecha || '-'}</p>
         <div class="actions">
-          <a class="btn" href="./detalle.html?id=${c.id}">Ver detalle</a>
-          ${c.pdfUrl ? `<a class="btn btn-secondary" href="${c.pdfUrl}" target="_blank" rel="noopener">Ver PDF</a>` : ''}
+          <a class="btn" href="${detailHref}">Ver detalle</a>
+          ${pdfAction}
         </div>
       </article>
-    `)
+    `;
+    })
     .join('');
 }
 
@@ -155,13 +169,15 @@ function mergeCirculares(primary = [], fallback = []) {
 }
 
 async function refreshCirculares() {
+  setCardsStatus('Cargando...');
+
   const [firestoreCirculares, storageCirculares] = await Promise.all([
     listCirculares().catch((error) => {
-      console.warn('No se pudieron cargar las circulares desde Firestore.', error);
+      console.error('Error al cargar circulares desde Firestore.', error);
       return [];
     }),
     listCircularesFromStorage().catch((error) => {
-      console.warn('No se pudieron listar PDFs desde Storage.', error);
+      console.error('Error al listar PDFs desde Storage.', error);
       return [];
     })
   ]);
@@ -170,6 +186,20 @@ async function refreshCirculares() {
   setupFilters();
   renderResults();
   renderSelectedCircular();
+}
+
+function waitForAuthenticatedUser() {
+  return new Promise((resolve) => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        unsubscribe();
+        resolve(user);
+      }
+    }, (error) => {
+      console.error('Error al verificar sesión de Firebase Auth.', error);
+      resolve(null);
+    });
+  });
 }
 
 function handleExitAdminMode() {
@@ -196,9 +226,20 @@ menuToggle?.addEventListener('click', () => {
   document.body.classList.toggle('sidebar-open');
 });
 
-refreshCirculares().catch((error) => {
-  console.error(error);
-  cardsContainer.innerHTML = '<p class="empty">No se pudieron cargar las circulares.</p>';
-});
 showUploadStatus();
 showView();
+
+waitForAuthenticatedUser()
+  .then((user) => {
+    if (!user) {
+      setCardsStatus('No hay sesión activa para cargar circulares.');
+      console.error('No se cargaron circulares porque auth.currentUser no está disponible.');
+      return;
+    }
+
+    return refreshCirculares();
+  })
+  .catch((error) => {
+    console.error('Error inesperado al inicializar la carga de circulares.', error);
+    setCardsStatus('No se pudieron cargar las circulares.');
+  });
