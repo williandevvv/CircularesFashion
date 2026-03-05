@@ -16,7 +16,7 @@ const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
 
 export const auth = getAuth(app);
 
-// ✅ Evita el error “client is offline” en GitHub Pages / WebChannel
+// Firestore con long polling para mejorar estabilidad en GitHub Pages sin duplicar initializeApp().
 export const db = initializeFirestore(app, {
   experimentalForceLongPolling: true,
   useFetchStreams: false

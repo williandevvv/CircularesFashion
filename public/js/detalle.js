@@ -2,8 +2,7 @@ import { db } from './firebase-config.js';
 import { listenSession, logout } from './auth.js';
 import { doc, getDoc } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js';
 
-const params = new URLSearchParams(window.location.search);
-const id = params.get('id');
+const id = new URLSearchParams(location.search).get('id');
 
 const metaEl = document.getElementById('meta');
 const pdfFrame = document.getElementById('pdfFrame');
@@ -24,9 +23,32 @@ function normalizeCircularData(data = {}) {
   };
 }
 
-function renderMissingCircular(message) {
+function renderError(message) {
   metaEl.innerHTML = `<p>${message}</p>`;
   noPdf.textContent = 'Sin PDF asociado';
+  noPdf.style.display = 'block';
+  pdfFrame.style.display = 'none';
+  openPdf.style.display = 'none';
+}
+
+function renderCircular(circular) {
+  metaEl.innerHTML = `
+    <p><strong>Número:</strong> ${circular.numero || '-'}</p>
+    <p><strong>Departamento:</strong> ${circular.departamento || '-'}</p>
+    <p><strong>Fecha:</strong> ${circular.fecha || '-'}</p>
+    <p><strong>Aplica a:</strong> ${circular.aplicaA || '-'}</p>
+  `;
+
+  if (circular.pdfUrl) {
+    pdfFrame.src = circular.pdfUrl;
+    pdfFrame.style.display = 'block';
+    openPdf.href = circular.pdfUrl;
+    openPdf.style.display = 'inline-flex';
+    noPdf.style.display = 'none';
+    return;
+  }
+
+  noPdf.textContent = 'Esta circular no tiene PDF asociado.';
   noPdf.style.display = 'block';
   pdfFrame.style.display = 'none';
   openPdf.style.display = 'none';
@@ -35,42 +57,23 @@ function renderMissingCircular(message) {
 async function initPage() {
   if (!id) {
     console.error('No se encontró el parámetro "id" en la URL de detalle.');
-    renderMissingCircular('Circular no encontrada');
+    renderError('Error: falta el parámetro "id" en la URL.');
     return;
   }
 
   try {
-    const circularRef = doc(db, 'circulares', id);
-    const snapshot = await getDoc(circularRef);
+    const snapshot = await getDoc(doc(db, 'circulares', id));
 
     if (!snapshot.exists()) {
-      renderMissingCircular('Circular no encontrada');
+      renderError('Circular no encontrada');
       return;
     }
 
     const circular = { id: snapshot.id, ...normalizeCircularData(snapshot.data()) };
-
-    metaEl.innerHTML = `
-      <p><strong>Número:</strong> ${circular.numero || '-'}</p>
-      <p><strong>Departamento:</strong> ${circular.departamento || '-'}</p>
-      <p><strong>Fecha:</strong> ${circular.fecha || '-'}</p>
-      <p><strong>Aplica a:</strong> ${circular.aplicaA || '-'}</p>
-    `;
-
-    if (circular.pdfUrl) {
-      const iframeMarkup = `<iframe src="${circular.pdfUrl}" style="width:100%; height:80vh;"></iframe>`;
-      pdfFrame.outerHTML = iframeMarkup;
-      openPdf.href = circular.pdfUrl;
-      noPdf.style.display = 'none';
-    } else {
-      noPdf.textContent = 'Sin PDF asociado';
-      noPdf.style.display = 'block';
-      pdfFrame.style.display = 'none';
-      openPdf.style.display = 'none';
-    }
+    renderCircular(circular);
   } catch (error) {
     console.error(`Error al obtener la circular ${id} desde Firestore.`, error);
-    renderMissingCircular('Circular no encontrada');
+    renderError('Circular no encontrada');
   }
 }
 
