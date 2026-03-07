@@ -37,8 +37,13 @@ export function generateCircularId() {
 
 export async function createCircular(data, circularId = generateCircularId()) {
   const ref = doc(db, CIRCULARES_COLLECTION, circularId);
+  const normalized = normalizeCircularData(data);
+
   await setDoc(ref, {
-    ...data,
+    ...normalized,
+    aplicaA: data.aplicaA ?? '',
+    codigos: Array.isArray(data.codigos) ? data.codigos : [],
+    storagePath: data.storagePath ?? '',
     createdAt: data.createdAt ?? serverTimestamp(),
     updatedAt: data.updatedAt ?? serverTimestamp()
   });
