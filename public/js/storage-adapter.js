@@ -8,8 +8,7 @@ import {
 } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-storage.js';
 
 export async function uploadPdf(file, circularId) {
-  const safeName = String(file?.name || 'archivo.pdf').replace(/\s+/g, '_');
-  const storagePath = `circulares/${circularId}/${Date.now()}_${safeName}`;
+  const storagePath = `circulares/${circularId}/archivo.pdf`;
   const fileRef = ref(storage, storagePath);
 
   await uploadBytes(fileRef, file, { contentType: 'application/pdf' });
@@ -24,8 +23,7 @@ export async function deletePdfByPath(storagePath) {
 }
 
 function normalizeFileName(name = '') {
-  const noTimestamp = name.replace(/^\d+_/, '');
-  return noTimestamp.replace(/\.pdf$/i, '').replace(/_/g, ' ').trim();
+  return name.replace(/\.pdf$/i, '').replace(/_/g, ' ').trim();
 }
 
 export async function listCircularesFromStorage() {
