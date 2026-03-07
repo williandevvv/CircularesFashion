@@ -1,4 +1,4 @@
-import { auth } from './firebase-config.js';
+import { auth, firestorePersistenceReady } from './firebase-config.js';
 import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js';
 import { listenCirculares } from './db-firebase.js';
 import { listCircularesFromStorage } from './storage-adapter.js';
@@ -24,9 +24,9 @@ const selectedCircularOpenPdf = document.getElementById('selectedCircularOpenPdf
 const selectedCircularNoPdf = document.getElementById('selectedCircularNoPdf');
 
 let circulares = [];
-let circularesLoadedForSession = false;
-let authResolvedForSession = false;
 let stopCircularesListener = null;
+let currentUserUid = null;
+let storageCircularesCache = [];
 
 function showView() {
   appView?.classList.remove('hidden');
@@ -173,24 +173,54 @@ function mergeCirculares(primary = [], fallback = []) {
 }
 
 async function loadCircularesOnce() {
-  if (circularesLoadedForSession) return;
-  circularesLoadedForSession = true;
+  if (stopCircularesListener) return;
   setCardsStatus('Cargando circulares...');
 
-  const storageCirculares = await listCircularesFromStorage().catch((error) => {
+  storageCircularesCache = await listCircularesFromStorage().catch((error) => {
     console.error('Error al listar PDFs desde Storage.', error);
     return [];
   });
 
   stopCircularesListener = listenCirculares((firestoreCirculares) => {
-    circulares = mergeCirculares(firestoreCirculares, storageCirculares);
+    circulares = mergeCirculares(firestoreCirculares, storageCircularesCache);
     setupFilters();
     renderResults();
     renderSelectedCircular();
   }, (error) => {
     console.error('Error al escuchar circulares desde Firestore.', error);
+    stopCircularesListener = null;
     setCardsStatus('No se pudieron cargar las circulares.');
   });
+}
+
+function clearCircularesView(message) {
+  stopCircularesListener?.();
+  stopCircularesListener = null;
+  circulares = [];
+  setupFilters();
+  renderResults();
+  renderSelectedCircular();
+  setCardsStatus(message);
+}
+
+async function handleAuthState(user) {
+  const nextUid = user?.uid || null;
+
+  if (!nextUid) {
+    currentUserUid = null;
+    clearCircularesView('Inicia sesión para consultar circulares.');
+    return;
+  }
+
+  const isSameUser = currentUserUid === nextUid;
+  currentUserUid = nextUid;
+
+  if (!isSameUser) {
+    stopCircularesListener?.();
+    stopCircularesListener = null;
+  }
+
+  await loadCircularesOnce();
 }
 
 function handleExitAdminMode() {
@@ -221,23 +251,22 @@ showUploadStatus();
 showView();
 setCardsStatus('Cargando sesión...');
 
-onAuthStateChanged(auth, (user) => {
-  if (authResolvedForSession) return;
-  authResolvedForSession = true;
-
-  if (!user) {
-    stopCircularesListener?.();
-    stopCircularesListener = null;
-    setCardsStatus('Inicia sesión para consultar circulares.');
-    return;
-  }
-
-  loadCircularesOnce().catch((error) => {
-    console.error('Error inesperado al inicializar la carga de circulares.', error);
-    setCardsStatus('No se pudieron cargar las circulares.');
-    circularesLoadedForSession = false;
+firestorePersistenceReady
+  .catch((error) => {
+    console.warn('Firestore persistence no pudo inicializarse. Se continuará sin cache persistente.', error);
+  })
+  .finally(() => {
+    onAuthStateChanged(auth, (user) => {
+      handleAuthState(user).catch((error) => {
+        console.error('Error inesperado al inicializar la carga de circulares.', error);
+        setCardsStatus('No se pudieron cargar las circulares.');
+      });
+    }, (error) => {
+      console.error('Error al esperar el estado de autenticación.', error);
+      setCardsStatus('No se pudo verificar la sesión.');
+    });
   });
-}, (error) => {
-  console.error('Error al esperar el estado de autenticación.', error);
-  setCardsStatus('No se pudo verificar la sesión.');
+
+window.addEventListener('beforeunload', () => {
+  stopCircularesListener?.();
 });
