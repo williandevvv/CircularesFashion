@@ -1,6 +1,7 @@
 import { auth, db } from './firebase-config.js';
 import { onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js';
 import { doc, getDoc } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js';
+import { listCircularesFromStorage } from './storage-adapter.js';
 
 const id = new URLSearchParams(location.search).get('id');
 
@@ -64,13 +65,21 @@ async function initPage() {
   try {
     const snapshot = await getDoc(doc(db, 'circulares', id));
 
-    if (!snapshot.exists()) {
-      renderError('Circular no encontrada.');
+    if (snapshot.exists()) {
+      const circular = { id: snapshot.id, ...normalizeCircularData(snapshot.data()) };
+      renderCircular(circular);
       return;
     }
 
-    const circular = { id: snapshot.id, ...normalizeCircularData(snapshot.data()) };
-    renderCircular(circular);
+    const storageCirculares = await listCircularesFromStorage();
+    const storageCircular = storageCirculares.find((item) => item.id === id);
+
+    if (storageCircular) {
+      renderCircular(storageCircular);
+      return;
+    }
+
+    renderError('Circular no encontrada.');
   } catch (error) {
     console.error(`Error al obtener la circular ${id} desde Firestore.`, error);
     if (error?.code === 'permission-denied') {

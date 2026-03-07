@@ -23,7 +23,11 @@ export async function deletePdfByPath(storagePath) {
 }
 
 function normalizeFileName(name = '') {
-  return name.replace(/\.pdf$/i, '').replace(/_/g, ' ').trim();
+  return String(name)
+    .replace(/\.pdf$/i, '')
+    .replace(/^\d{10,}([_\s-]+)/, '')
+    .replace(/[_\s-]+/g, ' ')
+    .trim();
 }
 
 export async function listCircularesFromStorage() {
@@ -36,9 +40,10 @@ export async function listCircularesFromStorage() {
     for (const fileRef of folderItems.items) {
       if (!/\.pdf$/i.test(fileRef.name)) continue;
       const pdfUrl = await getDownloadURL(fileRef);
+      const normalizedNumero = normalizeFileName(fileRef.name);
       result.push({
         id: circularFolder.name,
-        numero: normalizeFileName(fileRef.name) || circularFolder.name,
+        numero: normalizedNumero || 'Circular sin número',
         pdfUrl,
         storagePath: fileRef.fullPath,
         source: 'storage'
