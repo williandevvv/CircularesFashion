@@ -1,4 +1,4 @@
-import { firebaseConfig, auth, db } from './firebase-config.js';
+import { firebaseConfig, auth, db, firestorePersistenceReady } from './firebase-config.js';
 import {
   createUserWithEmailAndPassword,
   onAuthStateChanged,
@@ -222,6 +222,8 @@ export function listenSession(callback) {
   }
 
   return onAuthStateChanged(auth, async (user) => {
+    await firestorePersistenceReady.catch(() => {});
+
     try {
       sessionCache = await buildSession(user);
       callback(sessionCache);
@@ -238,6 +240,8 @@ export async function currentSession() {
     sessionCache = { ...TEMP_ADMIN_SESSION };
     return sessionCache;
   }
+
+  await firestorePersistenceReady.catch(() => {});
 
   if (auth.currentUser) {
     sessionCache = await buildSession(auth.currentUser);
