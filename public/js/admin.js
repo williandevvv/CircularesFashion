@@ -255,16 +255,23 @@ form?.addEventListener('submit', async (event) => {
     const circularId = generateCircularId();
     const uploaded = await uploadPdf(pdfFile, circularId);
 
-    await createCircular({
-      numero,
-      departamento,
-      fecha,
-      aplicaA,
-      codigos,
-      pdfUrl: uploaded.pdfUrl,
-      storagePath: uploaded.storagePath,
-      createdBy: 'admin-clave'
-    }, circularId);
+    try {
+      await createCircular({
+        numero,
+        departamento,
+        fecha,
+        aplicaA,
+        codigos,
+        pdfUrl: uploaded.pdfUrl,
+        storagePath: uploaded.storagePath,
+        createdBy: 'admin-clave'
+      }, circularId);
+    } catch (firestoreError) {
+      await deletePdfByPath(uploaded.storagePath).catch((cleanupError) => {
+        console.warn('No se pudo revertir el PDF tras fallar Firestore.', cleanupError);
+      });
+      throw firestoreError;
+    }
 
     showMessage('Circular subida correctamente.', 'success');
     clearFormState();
