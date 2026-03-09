@@ -7,6 +7,18 @@
   <link rel="stylesheet" href="./css/styles.css" />
 </head>
 <body>
+  <div id="accessGate" class="access-gate hidden">
+    <section class="access-gate-panel" role="dialog" aria-modal="true" aria-labelledby="accessGateTitle">
+      <h2 id="accessGateTitle">Acceso a Circulares</h2>
+      <p class="muted">Ingresa la clave para consultar circulares.</p>
+      <form id="accessGateForm">
+        <input id="accessKeyInput" type="password" placeholder="Clave de acceso" autocomplete="off" required />
+        <p id="accessGateError" class="error hidden" role="alert">Clave incorrecta. Intenta nuevamente.</p>
+        <button class="btn" type="submit">Entrar</button>
+      </form>
+    </section>
+  </div>
+
   <div class="layout">
     <header class="mobile-header">
       <button class="btn btn-secondary mobile-menu-toggle" type="button" aria-label="Abrir menú">☰</button>
@@ -23,7 +35,7 @@
     </aside>
 
     <main class="main">
-      <section id="appView">
+      <section id="appView" class="hidden">
         <div class="panel search-panel">
           <h2>Buscador de circulares</h2>
           <div class="actions" style="margin-bottom:12px;">

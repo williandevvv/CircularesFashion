@@ -1,5 +1,4 @@
-import { auth, firestorePersistenceReady } from './firebase-config.js';
-import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js';
+import { firestorePersistenceReady } from './firebase-config.js';
 import { listenCirculares } from './db-firebase.js';
 import { listCircularesFromStorage } from './storage-adapter.js';
 import { clearAdminAccess, requestAdminAccess } from './admin-access.js';
@@ -23,15 +22,74 @@ const selectedCircularFrame = document.getElementById('selectedCircularFrame');
 const selectedCircularOpenPdf = document.getElementById('selectedCircularOpenPdf');
 const selectedCircularNoPdf = document.getElementById('selectedCircularNoPdf');
 
+
+const ACCESS_STORAGE_KEY = 'circulares_public_access';
+const ACCESS_PASSWORD = 'circularesfs';
+const accessGate = document.getElementById('accessGate');
+const accessGateForm = document.getElementById('accessGateForm');
+const accessKeyInput = document.getElementById('accessKeyInput');
+const accessGateError = document.getElementById('accessGateError');
+
+function hasPublicAccess() {
+  return window.localStorage.getItem(ACCESS_STORAGE_KEY) === 'granted';
+}
+
+function grantPublicAccess() {
+  window.localStorage.setItem(ACCESS_STORAGE_KEY, 'granted');
+}
+
+function openAccessGate() {
+  appView?.classList.add('hidden');
+  accessGate?.classList.remove('hidden');
+  accessKeyInput?.focus();
+}
+
+function unlockAccessGate() {
+  accessGate?.classList.add('hidden');
+  appView?.classList.remove('hidden');
+}
+
+function initPublicAccessGate() {
+  if (hasPublicAccess()) {
+    unlockAccessGate();
+    return true;
+  }
+
+  openAccessGate();
+
+  accessGateForm?.addEventListener('submit', (event) => {
+    event.preventDefault();
+    const key = (accessKeyInput?.value || '').trim();
+
+    if (key !== ACCESS_PASSWORD) {
+      accessGateError?.classList.remove('hidden');
+      accessKeyInput?.focus();
+      accessKeyInput?.select();
+      return;
+    }
+
+    grantPublicAccess();
+    accessGateError?.classList.add('hidden');
+    accessKeyInput.value = '';
+    unlockAccessGate();
+    showView();
+    setCardsStatus('Cargando circulares...');
+    loadCircularesOnce().catch((error) => {
+      console.error('Error inesperado al inicializar la carga de circulares.', error);
+      setCardsStatus('No se pudieron cargar las circulares.');
+    });
+  });
+
+  return false;
+}
 let circulares = [];
 let stopCircularesListener = null;
-let currentUserUid = null;
 let storageCircularesCache = [];
 
 function showView() {
   appView?.classList.remove('hidden');
   btnAdmin?.classList.remove('hidden');
-  userBadge.textContent = 'Consulta pública de circulares';
+  userBadge.textContent = 'Consulta habilitada por clave';
   setupFilters();
   renderResults();
 }
@@ -193,36 +251,6 @@ async function loadCircularesOnce() {
   });
 }
 
-function clearCircularesView(message) {
-  stopCircularesListener?.();
-  stopCircularesListener = null;
-  circulares = [];
-  setupFilters();
-  renderResults();
-  renderSelectedCircular();
-  setCardsStatus(message);
-}
-
-async function handleAuthState(user) {
-  const nextUid = user?.uid || null;
-
-  if (!nextUid) {
-    currentUserUid = null;
-    clearCircularesView('Inicia sesión para consultar circulares.');
-    return;
-  }
-
-  const isSameUser = currentUserUid === nextUid;
-  currentUserUid = nextUid;
-
-  if (!isSameUser) {
-    stopCircularesListener?.();
-    stopCircularesListener = null;
-  }
-
-  await loadCircularesOnce();
-}
-
 function handleExitAdminMode() {
   clearAdminAccess();
   window.alert('Clave de admin eliminada para esta sesión.');
@@ -248,22 +276,23 @@ menuToggle?.addEventListener('click', () => {
 });
 
 showUploadStatus();
-showView();
-setCardsStatus('Cargando sesión...');
 
 firestorePersistenceReady
   .catch((error) => {
     console.warn('Firestore persistence no pudo inicializarse. Se continuará sin cache persistente.', error);
   })
   .finally(() => {
-    onAuthStateChanged(auth, (user) => {
-      handleAuthState(user).catch((error) => {
-        console.error('Error inesperado al inicializar la carga de circulares.', error);
-        setCardsStatus('No se pudieron cargar las circulares.');
-      });
-    }, (error) => {
-      console.error('Error al esperar el estado de autenticación.', error);
-      setCardsStatus('No se pudo verificar la sesión.');
+    const canEnter = initPublicAccessGate();
+    if (!canEnter) {
+      setCardsStatus('Ingresa la clave de acceso para consultar circulares.');
+      return;
+    }
+
+    showView();
+    setCardsStatus('Cargando circulares...');
+    loadCircularesOnce().catch((error) => {
+      console.error('Error inesperado al inicializar la carga de circulares.', error);
+      setCardsStatus('No se pudieron cargar las circulares.');
     });
   });
 
