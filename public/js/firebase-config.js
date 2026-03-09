@@ -8,9 +8,10 @@ import {
   initializeAuth
 } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
 import {
-  enableIndexedDbPersistence,
-  enableMultiTabIndexedDbPersistence,
-  getFirestore
+  initializeFirestore,
+  memoryLocalCache,
+  persistentLocalCache,
+  persistentMultipleTabManager
 } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 import { getStorage } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-storage.js";
 
@@ -43,28 +44,29 @@ try {
 export const auth = authInstance;
 
 // Firestore en este proyecto vive en la base no-default "circularesfs".
-export const db = getFirestore(app, "circularesfs");
+let firestoreCacheMode = 'persistent-multi-tab';
 
-export const firestorePersistenceReady = (async () => {
-  try {
-    await enableMultiTabIndexedDbPersistence(db);
-    return 'multi-tab';
-  } catch (multiTabError) {
-    const code = multiTabError?.code;
+let firestoreInstance;
 
-    if (code === 'unimplemented') {
-      console.warn('Firestore persistence no soportada en este navegador. Se usará memoria.', multiTabError);
-      return 'memory';
-    }
+try {
+  firestoreInstance = initializeFirestore(app, {
+    localCache: persistentLocalCache({
+      tabManager: persistentMultipleTabManager()
+    })
+  }, "circularesfs");
+} catch (error) {
+  console.warn(
+    'Firestore persistence no disponible. Se usará caché en memoria para mantener la app operativa.',
+    error
+  );
 
-    try {
-      await enableIndexedDbPersistence(db);
-      return 'single-tab';
-    } catch (singleTabError) {
-      console.warn('Firestore persistence no disponible. La app seguirá funcionando sin caché local.', singleTabError);
-      return 'memory';
-    }
-  }
-})();
+  firestoreCacheMode = 'memory';
+  firestoreInstance = initializeFirestore(app, {
+    localCache: memoryLocalCache()
+  }, "circularesfs");
+}
+
+export const db = firestoreInstance;
+export const firestorePersistenceReady = Promise.resolve(firestoreCacheMode);
 
 export const storage = getStorage(app);
