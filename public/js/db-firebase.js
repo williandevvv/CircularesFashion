@@ -75,6 +75,11 @@ export async function listCirculares() {
   return snapshot.docs.map((item) => ({ id: item.id, ...normalizeCircularData(item.data()) }));
 }
 
+export async function listAllCirculares() {
+  const snapshot = await getDocs(collection(db, CIRCULARES_COLLECTION));
+  return snapshot.docs.map((item) => ({ id: item.id, ...normalizeCircularData(item.data()) }));
+}
+
 export function listenCirculares(onNext, onError) {
   return onSnapshot(
     buildCircularesQuery(),

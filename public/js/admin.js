@@ -4,6 +4,7 @@ import {
   deleteCircular,
   generateCircularId,
   getCircularById,
+  listAllCirculares,
   listCirculares,
   updateCircular
 } from './db-firebase.js';
@@ -20,6 +21,7 @@ const codigosInput = document.getElementById('codigos');
 const circularesList = document.getElementById('circularesList');
 const adminMessage = document.getElementById('adminMessage');
 const btnLogout = document.getElementById('btnLogout');
+const btnExportExcel = document.getElementById('btnExportExcel');
 const menuToggle = document.querySelector('.mobile-menu-toggle');
 
 let editingId = null;
@@ -52,6 +54,62 @@ function showMessage(message = '', type = 'info') {
   adminMessage.classList.remove('status-success', 'status-error');
   if (type === 'success') adminMessage.classList.add('status-success');
   if (type === 'error') adminMessage.classList.add('status-error');
+}
+
+function normalizeExcelValue(value) {
+  if (!value) return '';
+  if (typeof value?.toDate === 'function') {
+    return value.toDate().toISOString();
+  }
+  if (value instanceof Date) {
+    return value.toISOString();
+  }
+  return value;
+}
+
+function buildExcelRows(circulares = []) {
+  return circulares.map((circular) => ({
+    ID: circular.id || '',
+    'Número de circular': circular.numero || '',
+    Departamento: circular.departamento || '',
+    Fecha: circular.fecha || '',
+    pdfUrl: circular.pdfUrl || '',
+    storagePath: circular.storagePath || '',
+    createdAt: normalizeExcelValue(circular.createdAt),
+    updatedAt: normalizeExcelValue(circular.updatedAt),
+    aplicaA: circular.aplicaA || '',
+    codigos: Array.isArray(circular.codigos) ? circular.codigos.join(', ') : ''
+  }));
+}
+
+async function exportCircularesToExcel() {
+  const XLSX = window.XLSX;
+  if (!XLSX) {
+    showMessage('No se pudo cargar la librería para exportar Excel.', 'error');
+    return;
+  }
+
+  try {
+    showMessage('Generando reporte Excel...', 'success');
+    const circulares = await listAllCirculares();
+
+    if (!circulares.length) {
+      showMessage('No hay circulares para exportar.', 'error');
+      return;
+    }
+
+    const rows = buildExcelRows(circulares);
+    const worksheet = XLSX.utils.json_to_sheet(rows);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Circulares');
+
+    const today = new Date().toISOString().slice(0, 10);
+    XLSX.writeFile(workbook, `reporte_circulares_${today}.xlsx`);
+    showMessage(`Reporte exportado con ${rows.length} circular(es).`, 'success');
+  } catch (error) {
+    console.error(error);
+    showMessage('No se pudo exportar el reporte Excel.', 'error');
+  }
 }
 
 function updateEditUI() {
@@ -331,6 +389,8 @@ btnLogout?.addEventListener('click', () => {
   clearAdminAccess();
   window.location.replace('./index.html');
 });
+
+btnExportExcel?.addEventListener('click', exportCircularesToExcel);
 
 menuToggle?.addEventListener('click', () => {
   document.body.classList.toggle('sidebar-open');

@@ -38,7 +38,7 @@
       <section id="appView" class="hidden">
         <div class="panel search-panel">
           <h2>Buscador de circulares</h2>
-          <div class="actions" style="margin-bottom:12px;">
+          <div class="actions">
             <button id="btnPriorityUpload" class="btn" type="button">Subir circular (requiere clave)</button>
           </div>
           <div class="filters">
@@ -52,8 +52,8 @@
 
         <section id="selectedCircularSection" class="card hidden">
           <h2>Circular recién subida</h2>
-          <div id="selectedCircularMeta"></div>
-          <iframe id="selectedCircularFrame" style="width:100%;height:80vh;border:1px solid #e5e7eb;border-radius:12px;"></iframe>
+          <div id="selectedCircularMeta" class="circular-meta"></div>
+          <iframe id="selectedCircularFrame" class="pdf-frame"></iframe>
           <p id="selectedCircularNoPdf" class="muted hidden">Esta circular no tiene PDF asociado.</p>
           <p><a id="selectedCircularOpenPdf" class="btn btn-secondary" target="_blank" rel="noopener">Abrir PDF</a></p>
         </section>

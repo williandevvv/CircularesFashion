@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Circulares | Admin</title>
   <link rel="stylesheet" href="./css/styles.css" />
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script type="module" src="./js/guard-admin.js"></script>
 </head>
 <body>
@@ -22,8 +23,11 @@
     </aside>
 
     <main class="main">
-      <section class="panel">
-        <h2 id="formTitle">Nueva circular</h2>
+      <section class="panel panel-header">
+        <div class="section-head">
+          <h2 id="formTitle">Nueva circular</h2>
+          <button id="btnExportExcel" class="btn btn-secondary" type="button">Descargar Excel</button>
+        </div>
         <form id="circular-form" class="grid-form">
           <label>Número</label>
           <input name="numero" required placeholder="005-26" />
