@@ -1,5 +1,4 @@
-import { auth, db } from './firebase-config.js';
-import { onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js';
+import { db } from './firebase-config.js';
 import { doc, getDoc } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js';
 import { listCircularesFromStorage } from './storage-adapter.js';
 
@@ -90,17 +89,11 @@ async function initPage() {
   }
 }
 
-async function logout() {
-  await signOut(auth);
-}
-
-btnLogout?.addEventListener('click', async () => {
-  await logout();
+btnLogout?.addEventListener('click', () => {
   window.location.replace('./index.html');
 });
 
-mobileLogout?.addEventListener('click', async () => {
-  await logout();
+mobileLogout?.addEventListener('click', () => {
   window.location.replace('./index.html');
 });
 
@@ -108,14 +101,13 @@ menuToggle?.addEventListener('click', () => {
   document.body.classList.toggle('sidebar-open');
 });
 
+const ACCESS_STORAGE_KEY = 'circulares_public_access';
+
 metaEl.innerHTML = '<p>Cargando detalle...</p>';
 
-onAuthStateChanged(auth, async (user) => {
-  if (!user) {
-    window.location.replace('./index.html');
-    return;
-  }
-
-  userBadge.textContent = user.email || 'Usuario autenticado';
-  await initPage();
-});
+if (window.localStorage.getItem(ACCESS_STORAGE_KEY) !== 'granted') {
+  window.location.replace('./index.html');
+} else {
+  userBadge.textContent = 'Consulta habilitada por clave';
+  initPage();
+}
