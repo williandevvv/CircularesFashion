@@ -264,6 +264,53 @@ select:focus {
 .hidden { display: none !important; }
 .error { color: #b91c1c; }
 .empty { color: var(--muted); text-align: center; }
+.skeleton-card {
+  pointer-events: none;
+}
+
+.skeleton-line,
+.skeleton-btn {
+  position: relative;
+  overflow: hidden;
+  border-radius: 10px;
+  background: #e2e8f0;
+}
+
+.skeleton-line::after,
+.skeleton-btn::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.7), transparent);
+  animation: skeleton-shimmer 1.2s infinite;
+}
+
+.skeleton-line {
+  height: 14px;
+  margin-bottom: .8rem;
+}
+
+.skeleton-title {
+  height: 22px;
+  width: 55%;
+}
+
+.skeleton-actions {
+  margin-top: 1rem;
+}
+
+.skeleton-btn {
+  display: inline-flex;
+  min-height: 44px;
+  flex: 1 1 auto;
+}
+
+@keyframes skeleton-shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
 .auth-panel,
 .grid-form { max-width: 100%; }
 .codes-box { background: #eef2ff; border: 1px solid #c7d2fe; border-radius: 10px; padding: .8rem; margin-bottom: 1rem; }

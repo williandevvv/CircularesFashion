@@ -30,6 +30,8 @@ const accessGateForm = document.getElementById('accessGateForm');
 const accessKeyInput = document.getElementById('accessKeyInput');
 const accessGateError = document.getElementById('accessGateError');
 
+const SKELETON_CARDS_COUNT = 6;
+
 function hasPublicAccess() {
   return window.localStorage.getItem(ACCESS_STORAGE_KEY) === 'granted';
 }
@@ -73,7 +75,7 @@ function initPublicAccessGate() {
     accessKeyInput.value = '';
     unlockAccessGate();
     showView();
-    setCardsStatus('Cargando circulares...');
+    showCardsSkeleton();
     loadCircularesOnce().catch((error) => {
       console.error('Error inesperado al inicializar la carga de circulares.', error);
       setCardsStatus('No se pudieron cargar las circulares.');
@@ -84,7 +86,8 @@ function initPublicAccessGate() {
 }
 let circulares = [];
 let stopCircularesListener = null;
-let storageCircularesCache = [];
+let hasRenderedFirestoreSnapshot = false;
+let filtersInitialized = false;
 
 function showView() {
   appView?.classList.remove('hidden');
@@ -97,6 +100,23 @@ function showView() {
 function setCardsStatus(message) {
   if (!cardsContainer) return;
   cardsContainer.innerHTML = `<p class="empty">${message}</p>`;
+}
+
+function showCardsSkeleton(count = SKELETON_CARDS_COUNT) {
+  if (!cardsContainer) return;
+  const skeletons = Array.from({ length: count }, () => `
+    <article class="card skeleton-card" aria-hidden="true">
+      <div class="skeleton-line skeleton-title"></div>
+      <div class="skeleton-line"></div>
+      <div class="skeleton-line"></div>
+      <div class="actions skeleton-actions">
+        <span class="btn skeleton-btn"></span>
+        <span class="btn skeleton-btn"></span>
+      </div>
+    </article>
+  `).join('');
+
+  cardsContainer.innerHTML = skeletons;
 }
 
 function showUploadStatus() {
@@ -122,6 +142,7 @@ function showUploadStatus() {
 
 function setupFilters() {
   const departments = [...new Set(circulares.map((c) => c.departamento).filter(Boolean))];
+  const previousValue = departmentFilter.value;
   departmentFilter.innerHTML = '<option value="">Todos los departamentos</option>';
   departments.forEach((dep) => {
     const op = document.createElement('option');
@@ -129,6 +150,9 @@ function setupFilters() {
     op.textContent = dep;
     departmentFilter.appendChild(op);
   });
+  if (previousValue && departments.includes(previousValue)) {
+    departmentFilter.value = previousValue;
+  }
 }
 
 function matchCircular(circular, term, department) {
@@ -193,7 +217,6 @@ function renderResults() {
 
   cardsContainer.innerHTML = results
     .map((c) => {
-      console.log('Render circular doc.id:', c.id);
       const detailHref = `./detalle.html?id=${encodeURIComponent(c.id)}`;
       const pdfAction = c.pdfUrl
         ? `<a class="btn btn-secondary" href="${c.pdfUrl}" target="_blank" rel="noopener">Ver PDF</a>`
@@ -223,31 +246,70 @@ function mergeCirculares(primary = [], fallback = []) {
   });
 
   fallback.forEach((item) => {
-    if (!item?.id || byId.has(item.id)) return;
-    byId.set(item.id, item);
+    if (!item?.id) return;
+    const current = byId.get(item.id);
+    if (!current) {
+      byId.set(item.id, item);
+      return;
+    }
+
+    if (!current.pdfUrl && item.pdfUrl) {
+      byId.set(item.id, { ...current, pdfUrl: item.pdfUrl, storagePath: item.storagePath ?? current.storagePath });
+    }
   });
 
   return Array.from(byId.values());
 }
 
-async function loadCircularesOnce() {
-  if (stopCircularesListener) return;
-  setCardsStatus('Cargando circulares...');
+function updateCircularesFromFirestore(firestoreCirculares = []) {
+  circulares = mergeCirculares(firestoreCirculares, []);
 
-  storageCircularesCache = await listCircularesFromStorage().catch((error) => {
-    console.error('Error al listar PDFs desde Storage.', error);
+  if (!filtersInitialized) {
+    setupFilters();
+    filtersInitialized = true;
+  }
+
+  renderResults();
+  renderSelectedCircular();
+}
+
+async function hydrateMissingPdfUrls(firestoreCirculares = []) {
+  const missingPdfIds = firestoreCirculares
+    .filter((item) => item?.id && !item.pdfUrl)
+    .map((item) => item.id);
+
+  if (!missingPdfIds.length) return;
+
+  const storageFallback = await listCircularesFromStorage({ onlyIds: missingPdfIds }).catch((error) => {
+    console.error('Error al consultar fallback de PDFs en Storage.', error);
     return [];
   });
 
+  if (!storageFallback.length) return;
+
+  circulares = mergeCirculares(firestoreCirculares, storageFallback);
+  setupFilters();
+  renderResults();
+  renderSelectedCircular();
+}
+
+async function loadCircularesOnce() {
+  if (stopCircularesListener) return;
+
   stopCircularesListener = listenCirculares((firestoreCirculares) => {
-    circulares = mergeCirculares(firestoreCirculares, storageCircularesCache);
-    setupFilters();
-    renderResults();
-    renderSelectedCircular();
+    hasRenderedFirestoreSnapshot = true;
+    updateCircularesFromFirestore(firestoreCirculares);
+
+    hydrateMissingPdfUrls(firestoreCirculares).catch((error) => {
+      console.error('Error inesperado en hidratación de PDFs.', error);
+    });
   }, (error) => {
     console.error('Error al escuchar circulares desde Firestore.', error);
     stopCircularesListener = null;
-    setCardsStatus('No se pudieron cargar las circulares.');
+
+    if (!hasRenderedFirestoreSnapshot) {
+      setCardsStatus('No se pudieron cargar las circulares.');
+    }
   });
 }
 
@@ -289,7 +351,7 @@ firestorePersistenceReady
     }
 
     showView();
-    setCardsStatus('Cargando circulares...');
+    showCardsSkeleton();
     loadCircularesOnce().catch((error) => {
       console.error('Error inesperado al inicializar la carga de circulares.', error);
       setCardsStatus('No se pudieron cargar las circulares.');
