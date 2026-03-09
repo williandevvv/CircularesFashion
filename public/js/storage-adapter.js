@@ -30,26 +30,32 @@ function normalizeFileName(name = '') {
     .trim();
 }
 
-export async function listCircularesFromStorage() {
+export async function listCircularesFromStorage(options = {}) {
+  const onlyIds = Array.isArray(options.onlyIds) && options.onlyIds.length
+    ? new Set(options.onlyIds.filter(Boolean).map(String))
+    : null;
+
   const rootRef = ref(storage, 'circulares');
   const root = await listAll(rootRef);
-  const result = [];
+  const folderPromises = root.prefixes
+    .filter((folder) => !onlyIds || onlyIds.has(folder.name))
+    .map(async (circularFolder) => {
+      const folderItems = await listAll(circularFolder);
+      const pdfRef = folderItems.items.find((item) => /\.pdf$/i.test(item.name));
+      if (!pdfRef) return null;
 
-  for (const circularFolder of root.prefixes) {
-    const folderItems = await listAll(circularFolder);
-    for (const fileRef of folderItems.items) {
-      if (!/\.pdf$/i.test(fileRef.name)) continue;
-      const pdfUrl = await getDownloadURL(fileRef);
-      const normalizedNumero = normalizeFileName(fileRef.name);
-      result.push({
+      const pdfUrl = await getDownloadURL(pdfRef);
+      const normalizedNumero = normalizeFileName(pdfRef.name);
+      return {
         id: circularFolder.name,
         numero: normalizedNumero || 'Circular sin número',
         pdfUrl,
-        storagePath: fileRef.fullPath,
+        storagePath: pdfRef.fullPath,
         source: 'storage'
-      });
-    }
-  }
+      };
+    });
 
-  return result;
+  const result = await Promise.all(folderPromises);
+
+  return result.filter(Boolean);
 }
