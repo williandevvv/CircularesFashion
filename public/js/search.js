@@ -15,6 +15,8 @@ const uploadStatus = document.getElementById('uploadStatus');
 
 const searchInput = document.getElementById('searchInput');
 const departmentFilter = document.getElementById('departmentFilter');
+const monthFilter = document.getElementById('monthFilter');
+const sortFilter = document.getElementById('sortFilter');
 const cardsContainer = document.getElementById('cardsContainer');
 const selectedCircularSection = document.getElementById('selectedCircularSection');
 const selectedCircularMeta = document.getElementById('selectedCircularMeta');
@@ -155,10 +157,11 @@ function setupFilters() {
   }
 }
 
-function matchCircular(circular, term, department) {
+function matchCircular(circular, term, department, month) {
   const normalized = term.toUpperCase();
   const depOk = !department || circular.departamento === department;
-  if (!depOk) return false;
+  const monthOk = !month || getMonthFromDate(circular.fecha) === month;
+  if (!depOk || !monthOk) return false;
   if (!normalized) return true;
 
   const codes = Array.isArray(circular.codigos) ? circular.codigos : [];
@@ -167,6 +170,40 @@ function matchCircular(circular, term, department) {
   const byDepartment = String(circular.departamento || '').toUpperCase().includes(normalized);
 
   return byCode || byNumber || byDepartment;
+}
+
+
+function getMonthFromDate(value = '') {
+  const normalized = String(value || '').trim();
+  const match = normalized.match(/^(\d{4})-(\d{2})/);
+  if (!match) return '';
+  return `${match[1]}-${match[2]}`;
+}
+
+function getSortableNumber(value = '') {
+  const normalized = String(value || '').trim();
+  if (!normalized) return Number.NEGATIVE_INFINITY;
+
+  const numbers = normalized.match(/\d+/g);
+  if (!numbers?.length) return Number.NEGATIVE_INFINITY;
+
+  return Number(numbers.join(''));
+}
+
+function compareCirculares(a, b, sortValue = 'numero-desc') {
+  if (sortValue === 'numero-asc') {
+    return getSortableNumber(a.numero) - getSortableNumber(b.numero);
+  }
+
+  if (sortValue === 'fecha-desc') {
+    return String(b.fecha || '').localeCompare(String(a.fecha || ''));
+  }
+
+  if (sortValue === 'fecha-asc') {
+    return String(a.fecha || '').localeCompare(String(b.fecha || ''));
+  }
+
+  return getSortableNumber(b.numero) - getSortableNumber(a.numero);
 }
 
 function renderSelectedCircular() {
@@ -207,8 +244,12 @@ function renderSelectedCircular() {
 function renderResults() {
   const term = (searchInput.value || '').trim();
   const dep = departmentFilter.value;
+  const month = monthFilter?.value || '';
+  const sortValue = sortFilter?.value || 'numero-desc';
 
-  const results = circulares.filter((c) => matchCircular(c, term, dep));
+  const results = circulares
+    .filter((c) => matchCircular(c, term, dep, month))
+    .sort((a, b) => compareCirculares(a, b, sortValue));
 
   if (!results.length) {
     setCardsStatus('No hay resultados con ese filtro.');
@@ -326,6 +367,8 @@ function openAdmin() {
 
 searchInput?.addEventListener('input', renderResults);
 departmentFilter?.addEventListener('change', renderResults);
+monthFilter?.addEventListener('change', renderResults);
+sortFilter?.addEventListener('change', renderResults);
 
 btnLogout?.addEventListener('click', handleExitAdminMode);
 mobileLogout?.addEventListener('click', handleExitAdminMode);
